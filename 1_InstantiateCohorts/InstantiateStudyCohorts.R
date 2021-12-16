@@ -201,8 +201,10 @@ working.cond.db<-condition_occurrence_db  %>%
  
 # first in history (we´re using all history time window prior to index) 
 working.cond.db<-working.cond.db %>% 
-  group_by(cohort_start_date) %>% 
+  group_by(subject_id) %>% 
   slice_min(cohort_start_date, n = 1) 
+
+
 
 # insert into  table
 print(paste0("-- Getting ", cond.names[i]))

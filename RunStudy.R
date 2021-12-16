@@ -54,6 +54,8 @@ cohortTableMedications<-paste0(cohortTableStem, "Medications")
 source(here("1_InstantiateCohorts","InstantiateStudyCohorts.R"))
 
 # study cohorts ----
+# The study cohorts are various combinations of vaccination dose cohorts that have been instantiated
+
 # 1.	Persons who received at least one dose of vaccine (any brand).
 # 2.	Persons who completed full doses of vaccine (any brand).
 # 3.	Persons who received at least one dose of viral vector-based vaccines.
@@ -72,25 +74,15 @@ study.cohorts<-data.frame(
   "mRNA second-dose after viral vector first-dose")) %>% 
   mutate(id=1:length(name))
 
-study.cohorts$db.cohort.ids<-NA
-study.cohorts<-study.cohorts %>% 
-  mutate(db.cohort.ids=ifelse(name=="Any first-dose",
-                      glue_collapse(exposure.cohorts %>% 
-  filter(str_detect(name,"dose1")) %>% 
-  select(id) %>% 
-  pull(),", ", ),
-  db.cohort.ids ))
-
-
-
 
 # get database end date -----
 db.end.date<-observation_period_db %>% 
     summarise(max(observation_period_end_date, na.rm=TRUE)) %>% 
     collect() %>%  pull()
+db.end.date<-dmy(format(db.end.date, "%d/%m/%Y"))
 
 # Run analysis ----
-source(here("Analysis","Analysis.R"))
+source(here("2_Analysis","Analysis.R"))
 
 # Tidy up and save ----
 Survival.summary<-bind_rows(Survival.summary, .id = NULL)
@@ -113,10 +105,6 @@ save(Survival.summary,
      file = paste0(output.folder, "/Survival.summary_", db.name, ".RData"))
 save(Model.estimates, 
      file = paste0(output.folder, "/Model.estimates_", db.name, ".RData"))
-save(Cohort.entry.plot.data, 
-     file = paste0(output.folder, "/Cohort.entry.plot.data_", db.name, ".RData"))
-save(Cohort.age.plot.data, 
-     file = paste0(output.folder, "/Cohort.age.plot.data_", db.name, ".RData"))
 
 # # zip results
 print("Zipping results to output folder")
@@ -126,9 +114,7 @@ zipName <- paste0(output.folder, "/OutputToShare_", db.name, ".zip")
 
 files<-c(paste0(output.folder, "/Patient.characteristcis_", db.name, ".RData"),
          paste0(output.folder, "/Survival.summary_", db.name, ".RData"),
-         paste0(output.folder, "/Model.estimates_", db.name, ".RData"),
-         paste0(output.folder, "/Cohort.entry.plot.data_", db.name, ".RData") ,
-         paste0(output.folder, "/Cohort.age.plot.data_", db.name, ".RData")   )
+         paste0(output.folder, "/Model.estimates_", db.name, ".RData") )
 files <- files[file.exists(files)==TRUE]
 createZipFile(zipFile = zipName,
               rootFolder=output.folder,
