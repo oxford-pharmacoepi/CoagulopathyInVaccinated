@@ -5,14 +5,78 @@ Survival.summary<-list() # to collect cumulative incidence estimates
 Model.estimates<-list() # 
 
 # run through exposures and outcomes ----
-# for(i in 1:1){  
-for(i in 1:length(study.cohorts$id)){  
+for(i in 1:2){  
+# for(i in 1:length(study.cohorts$id)){  
 working.study.cohort.id<-  study.cohorts$id[i]
 working.study.cohort<-  study.cohorts$name[i]
 print(paste0("Running anyalsis for: ", working.study.cohort, " (", i, " of ", 
              length(study.cohorts$id), ")"))
   
 # Create Pop df ----
+if(working.study.cohort %in% c("dose1_AZ", "dose1_moderna", "dose1_pfizer" )){
+ids.to.collect<-exposure.cohorts %>% 
+  filter(name==working.study.cohort) %>% 
+  select(id) %>% 
+  pull()
+working.exposure.cohorts_db<-exposure.cohorts_db %>% 
+               filter(cohort_definition_id %in% !!ids.to.collect ) %>% 
+               select(subject_id,cohort_start_date,cohort_definition_id) %>% 
+               rename("person_id"="subject_id") 
+# first 
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  group_by(person_id) %>% 
+  slice_min(cohort_start_date, n = 1) %>% 
+  ungroup()%>% 
+  distinct()
+rm(ids.to.collect)
+
+# get next vax for censoring
+ids.to.collect<-exposure.cohorts %>% 
+  filter(name %in% c("dose2_AZ", "dose2_moderna_any", "dose2_pfizer_any") ) %>% 
+  select(id) %>% 
+  pull()
+working.vax.censor_db<-exposure.cohorts_db %>% 
+               filter(cohort_definition_id %in% !!ids.to.collect ) %>% 
+               select(subject_id,cohort_start_date) %>% 
+               rename("person_id"="subject_id") 
+working.vax.censor_db<-working.vax.censor_db %>% 
+  group_by(person_id) %>% 
+  slice_min(cohort_start_date, n = 1) %>% 
+  distinct()
+working.vax.censor_db<-working.vax.censor_db %>%
+  rename("next_vax_date"="cohort_start_date")
+
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  left_join(working.vax.censor_db)
+
+rm(ids.to.collect)
+}
+
+if(working.study.cohort %in% c("dose1_janssen") |  str_detect(working.study.cohort,"dose2")){
+ids.to.collect<-exposure.cohorts %>% 
+  filter(name==working.study.cohort) %>% 
+  select(id) %>% 
+  pull()
+working.exposure.cohorts_db<-exposure.cohorts_db %>% 
+               filter(cohort_definition_id %in% !!ids.to.collect ) %>% 
+               select(subject_id,cohort_start_date,cohort_definition_id) %>% 
+               rename("person_id"="subject_id") 
+# first 
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  group_by(person_id) %>% 
+  slice_min(cohort_start_date, n = 1) %>% 
+  ungroup()%>% 
+  distinct()
+rm(ids.to.collect)
+
+# get next vax for censoring
+# no subsequent vax
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  mutate("next_vax_date"=as.Date(NA))
+
+
+}
+
 if(working.study.cohort=="Any first-dose"){
 ids.to.collect<-exposure.cohorts %>% 
   filter(str_detect(name,"dose1")) %>% 
@@ -390,6 +454,32 @@ if(nrow(working.persons.all.history)>0){
 Pop<-Pop %>%
   mutate(across(all_of(paste0(cond.names, ".all.history")), ~ replace_na(.x, 0))) 
 
+# covid history -----
+covid.cohorts<-covid.cohorts_db %>%
+  rename("person_id"="subject_id") %>% 
+  rename("covid_date"="cohort_start_date") %>% 
+  select(person_id, covid_date) %>% 
+  inner_join(working.exposure.cohorts_db %>% 
+               select(person_id)) %>% 
+  collect()
+
+# add index
+covid.cohorts<-covid.cohorts %>% 
+  left_join(Pop %>% select(person_id, cohort_start_date)) %>% 
+  filter(covid_date<=(cohort_start_date))%>% 
+  filter(covid_date>=(cohort_start_date-years(1))) %>% 
+  select(person_id) %>% 
+  distinct() %>% 
+  mutate(covid.year_prior=1)
+#add
+Pop<-Pop %>% 
+  left_join(covid.cohorts,
+             by = "person_id")
+
+Pop<-Pop %>% 
+  mutate(covid.year_prior=ifelse(is.na(covid.year_prior), 0,1))
+table(Pop$covid.year_prior)
+
 # medication history -----
 #  183 days prior to four days prior index date
 # add each medication to pop
@@ -508,11 +598,12 @@ summary.characteristics1<-data.frame(Overall=t(working.data %>%
 
     # and all the conds and medications
 summary.characteristics2<-data.frame(Overall=t(working.data %>% 
-                           summarise_at(.vars = all_of(c(paste0(cond.names, ".all.history"),
+                           summarise_at(.vars = all_of(c("covid.year_prior",
+                                                         paste0(cond.names, ".all.history"),
                                                          drug.names)), 
                                         .funs = function(x, tot){
                                           paste0(nice.num.count(sum(x)), " (", nice.num((sum(x)/tot)*100), "%)")
-                                        } , tot=nrow(working.data))) )
+                                        } , tot=nrow(working.data))))
 
 summary.characteristics3<-data.frame(Overall=t(working.data %>% 
                            summarise_at(.vars = all_of(c("cond.comp", "drug.comp", 
@@ -951,6 +1042,29 @@ Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.p
                        value.working.study.cohort=working.study.cohort)
 
 if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.no.covid")]]<-
+    get.Surv.summaries(working.data=working.Pop %>% 
+                         filter(covid.year_prior==0),
+                       value.prior.obs.required="No",
+                       value.pop.type="No covid",
+                       value.working.outcome=working.outcome,
+                       value.working.outcome.name=working.outcome.name,
+                       value.working.study.cohort=working.study.cohort)
+}
+
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.covid")]]<-
+    get.Surv.summaries(working.data=working.Pop %>% 
+                         filter(covid.year_prior==1),
+                       value.prior.obs.required="No",
+                       value.pop.type="Covid",
+                       value.working.outcome=working.outcome,
+                       value.working.outcome.name=working.outcome.name,
+                       value.working.study.cohort=working.study.cohort)
+}
+#
+
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
 Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.all")]]<-
   get.Surv.summaries(working.data=working.Pop %>% 
                        filter(prior_obs_years>=1),
@@ -961,14 +1075,38 @@ Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prio
                      value.working.study.cohort=working.study.cohort)
 }
 
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.no.covid")]]<-
+  get.Surv.summaries(working.data=working.Pop %>% 
+                       filter(prior_obs_years>=1)%>% 
+                         filter(covid.year_prior==0),
+                     value.prior.obs.required="Yes",
+                     value.pop.type="No covid",
+                     value.working.outcome=working.outcome,
+                     value.working.outcome.name=working.outcome.name,
+                     value.working.study.cohort=working.study.cohort)
+}
+
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.covid")]]<-
+  get.Surv.summaries(working.data=working.Pop %>% 
+                       filter(prior_obs_years>=1)%>% 
+                         filter(covid.year_prior==1),
+                     value.prior.obs.required="Yes",
+                     value.pop.type="Covid",
+                     value.working.outcome=working.outcome,
+                     value.working.outcome.name=working.outcome.name,
+                     value.working.study.cohort=working.study.cohort)
+}
 # modelling  ------
-# table(working.Pop$f_u.outcome)
 
-#
 print(" -- Fitting models")
-get.models<-function(working.data){
+dd<<-datadist(working.Pop %>% 
+                select(-c("day_of_birth", "month_of_birth", "next_vax_date",
+                         "cohort_definition_id" ))); options(datadist = "dd" )
 
-dd<<-datadist(working.data %>% select(-c("day_of_birth", "month_of_birth", "next_vax_date"))); options(datadist = "dd" )
+
+get.models<-function(working.data){
 
 # choose whether to fit age as linear or with rcs (3 knots)
 m.age.linear<-lrm(f_u.outcome ~ age,
@@ -977,7 +1115,7 @@ m.age.linear<-lrm(f_u.outcome ~ age,
 m.age.rcs.3<-lrm(f_u.outcome ~ rcs(age,3),
        x=TRUE,y=TRUE,  maxit=100000,
        data = working.data)
-age.fit<-ifelse(AIC(m.age.linear)<=AIC(m.age.rcs.3),
+age.fit<-ifelse(BIC(m.age.linear)<=BIC(m.age.rcs.3),
        "age", "rcs(age,3)")
 # interaction between age and sex
 age.gender.f<-paste0(age.fit, "+ gender")
@@ -1144,7 +1282,7 @@ bind_rows(working.summary.age,
 }
 
 if(nrow(working.Pop %>% 
-        filter(f_u.outcome==1))>=5){  
+        filter(f_u.outcome==1))>=30){  
 Model.estimates[[paste0(working.study.cohort,
                                    ";",working.outcome.name,";",
                                    "No.prior.obs", ";",
@@ -1156,12 +1294,40 @@ Model.estimates[[paste0(working.study.cohort,
          working.study.cohort=working.study.cohort)
 }
 
-
-
+if(nrow(working.Pop %>% 
+        filter(covid.year_prior==0) %>% 
+        filter(f_u.outcome==1))>=30){  
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "No.prior.obs", ";",
+                                   "pop.no.covid")]]<-get.models(working.Pop %>% 
+        filter(covid.year_prior==0) ) %>% 
+  mutate(prior.obs.required="No",
+         pop.type="No covid",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)
+}
 
 if(nrow(working.Pop %>% 
+        filter(covid.year_prior==1) %>% 
+        filter(f_u.outcome==1))>=30){  
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "No.prior.obs", ";",
+                                   "pop.covid")]]<-get.models(working.Pop %>% 
+        filter(covid.year_prior==1) ) %>% 
+  mutate(prior.obs.required="No",
+         pop.type="Covid",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)
+}
+
+#
+if(nrow(working.Pop %>% 
         filter(prior_obs_years>=1) %>% 
-        filter(f_u.outcome==1))>=5){  
+        filter(f_u.outcome==1))>=30){  
 Model.estimates[[paste0(working.study.cohort,
                                    ";",working.outcome.name,";",
                                    "prior.obs", ";",
@@ -1172,6 +1338,37 @@ Model.estimates[[paste0(working.study.cohort,
          working.outcome.name=working.outcome.name,
          working.study.cohort=working.study.cohort)}
 
+if(nrow(working.Pop %>% 
+        filter(covid.year_prior==0) %>% 
+        filter(prior_obs_years>=1) %>% 
+        filter(f_u.outcome==1))>=30){  
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "prior.obs", ";",
+                                   "no.covid")]]<-get.models(working.Pop %>% 
+                                                               filter(covid.year_prior==0) %>% 
+                                                               filter(prior_obs_years>=1)) %>% 
+  mutate(prior.obs.required="Yes",
+         pop.type="No covid",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)}
+
+if(nrow(working.Pop %>% 
+        filter(covid.year_prior==1) %>% 
+        filter(prior_obs_years>=1) %>% 
+        filter(f_u.outcome==1))>=30){  
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "prior.obs", ";",
+                                   "Covid")]]<-get.models(working.Pop %>% 
+                                                               filter(covid.year_prior==1) %>% 
+                                                               filter(prior_obs_years>=1)) %>% 
+  mutate(prior.obs.required="Yes",
+         pop.type="Covid",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)}
 
 
 
@@ -1195,7 +1392,7 @@ pat.ch[[2]]<-Pop.summary.characteristics.with.history %>%
     mutate(age_gr2="All")
 Patient.characteristcis[[paste0(i)]]<-bind_rows(pat.ch)
 
-}
+gc() }
 
 
 

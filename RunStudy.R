@@ -47,6 +47,7 @@ cohortTableExposures<-paste0(cohortTableStem, "Exposures")
 cohortTableOutcomes<-paste0(cohortTableStem, "Outcomes")
 cohortTableComorbiditiestmp<-paste0(cohortTableStem, "Comorbiditiestmp")
 cohortTableComorbidities<-paste0(cohortTableStem, "Comorbidities")
+cohortTableCovid<-paste0(cohortTableStem, "Covid")
 cohortTableMedicationstmp<-paste0(cohortTableStem, "Medicationstmp")
 cohortTableMedications<-paste0(cohortTableStem, "Medications")
 
@@ -64,7 +65,10 @@ source(here("1_InstantiateCohorts","InstantiateStudyCohorts.R"))
 # 6.	Persons who completed full doses of mRNA vaccine. 
 # 7.	Persons who received heterologous vaccines-people had viral vector-based vaccine as the 1st dose followed by mRNA as the 2nd dose. 
 
-study.cohorts<-data.frame(
+study.cohorts<-bind_rows(
+  exposure.cohorts %>% 
+  select(id, name),
+  data.frame(
   name=c("Any first-dose",
   "Any full-dose",
   "Viral vector first-dose",
@@ -72,9 +76,8 @@ study.cohorts<-data.frame(
   "Viral vector full-dose",
   "mRNA full-dose",
   "mRNA second-dose after viral vector first-dose")) %>% 
-  mutate(id=1:length(name))
-
-
+  mutate(id=((nrow(exposure.cohorts)+1):c(nrow(exposure.cohorts)+7))))
+  
 # get database end date -----
 db.end.date<-observation_period_db %>% 
     summarise(max(observation_period_end_date, na.rm=TRUE)) %>% 

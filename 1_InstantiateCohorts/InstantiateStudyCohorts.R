@@ -1,12 +1,10 @@
 # connect -----
 conn <- connect(connectionDetails)
 # instantiate exposure cohorts -----
-cohort.sql<-list.files(here("1_InstantiateCohorts","ExposureCohorts", "sql"))
-cohort.sql<-cohort.sql[cohort.sql!="CreateCohortTable.sql"]
-
-exposure.cohorts<-tibble(id=as.integer(1:length(cohort.sql)),
-                        file=cohort.sql,
-                        name=str_replace(cohort.sql, ".sql", ""))
+CohortsToCreate <- suppressMessages(read_csv("1_InstantiateCohorts/ExposureCohorts/CohortsToCreate.csv"))
+exposure.cohorts<-tibble(id=CohortsToCreate$cohortId,
+                        file=paste0(CohortsToCreate$name, ".sql"),
+                        name=CohortsToCreate$name)
 if(run.as.test==TRUE){
 exposure.cohorts <-  head(exposure.cohorts, 1)
 }
@@ -68,12 +66,10 @@ exposure.cohorts<-exposure.cohorts %>%
 # exposure.cohorts
 
 # instantiate outcome cohorts -----
-cohort.sql<-list.files(here("1_InstantiateCohorts","OutcomeCohorts", "sql"))
-cohort.sql<-cohort.sql[cohort.sql!="CreateCohortTable.sql"]
-
-outcome.cohorts<-tibble(id=as.integer(1:length(cohort.sql)),
-                         file=cohort.sql,
-                         name=str_replace(cohort.sql, ".sql", "")) 
+CohortsToCreate <- suppressMessages(read_csv("1_InstantiateCohorts/OutcomeCohorts/CohortsToCreate.csv"))
+outcome.cohorts<-tibble(id=CohortsToCreate$cohortId,
+                        file=paste0(CohortsToCreate$name, ".sql"),
+                        name=CohortsToCreate$name)
 if(run.as.test==TRUE){
 outcome.cohorts <-  head(outcome.cohorts, 1)
 }
@@ -81,9 +77,8 @@ outcome.cohorts <-  head(outcome.cohorts, 1)
 if(create.outcome.cohorts==TRUE){
 print(paste0("- Getting outcome cohorts"))
 
-conn <- connect(connectionDetails)
 # create empty cohorts table
-sql<-readSql(here("1_InstantiateCohorts","ExposureCohorts","sql","CreateCohortTable.sql"))
+sql<-readSql(here("1_InstantiateCohorts","OutcomeCohorts","sql","CreateCohortTable.sql"))
 sql<-SqlRender::translate(sql, targetDialect = targetDialect)
 renderTranslateExecuteSql(conn=conn, 
                           sql,
@@ -351,6 +346,60 @@ cohortTableMedications_db<- tbl(db, sql(paste0("SELECT * FROM ",  results_databa
 # cohortTableMedications_db%>%
 #   group_by(cohort_definition_id) %>%
 #    tally()
+
+# instantiate covid cohorts -----
+cohort.sql<-list.files(here("1_InstantiateCohorts","CovidCohorts", "sql"))
+cohort.sql<-cohort.sql[cohort.sql!="CreateCohortTable.sql"]
+covid.cohorts<-tibble(id=as.integer(1:length(cohort.sql)),
+                        file=cohort.sql,
+                        name=str_replace(cohort.sql, ".sql", ""))
+
+if(create.profile.cohorts==TRUE){
+print(paste0("- Getting covid cohorts"))
+
+# create empty cohorts table
+sql<-readSql(here("1_InstantiateCohorts","CovidCohorts","sql","CreateCohortTable.sql"))
+sql<-SqlRender::translate(sql, targetDialect = targetDialect)
+renderTranslateExecuteSql(conn=conn, 
+                          sql,
+                          cohort_database_schema =  results_database_schema,
+                          cohort_table = cohortTableCovid)
+rm(sql)
+
+for(cohort.i in 1:length(covid.cohorts$id)){
+  working.id<-outcome.cohorts$id[cohort.i]
+  print(paste0("-- Getting: ",  covid.cohorts$name[cohort.i],
+               " (", cohort.i, " of ", length(covid.cohorts$name), ")"))
+  
+  sql<-readSql(here("1_InstantiateCohorts","CovidCohorts", "sql",covid.cohorts$file[cohort.i])) 
+  sql <- sub("BEGIN: Inclusion Impact Analysis - event.*END: Inclusion Impact Analysis - person", "", sql)
+  sql<-SqlRender::translate(sql, targetDialect = targetDialect)
+  renderTranslateExecuteSql(conn=conn, 
+                            sql, 
+                            cdm_database_schema = cdm_database_schema,
+                            vocabulary_database_schema = vocabulary_database_schema,
+                            target_database_schema = results_database_schema,
+                            # results_database_schema = results_database_schema,
+                            target_cohort_table = cohortTableCovid,
+                            target_cohort_id = working.id)  
+}
+} else {
+  print(paste0("Skipping creating covid cohorts")) 
+}
+
+
+
+# link to table
+covid.cohorts_db<-tbl(db, sql(paste0("SELECT * FROM ",
+                                        results_database_schema,".",
+                                        cohortTableCovid)))%>% 
+  mutate(cohort_definition_id=as.integer(cohort_definition_id)) 
+
+
+
+
+
+
 
 # disconnect ----
 disconnect(conn)
