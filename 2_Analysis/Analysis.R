@@ -751,9 +751,9 @@ f_u.outcome<-working.outcomes %>%
                             next_vax_date) %>% 
                      rename("subject_id"="person_id") %>% 
                      rename("Pop_cohort_start_date"="cohort_start_date"))  %>% 
-    #within 21 days
+    #within 28 days
         filter(cohort_start_date>= Pop_cohort_start_date) %>% 
-        filter(cohort_start_date<= (Pop_cohort_start_date+days(21))) %>% 
+        filter(cohort_start_date<= (Pop_cohort_start_date+days(28))) %>% 
    #  on or after next vax
         filter(is.na(next_vax_date) |
           cohort_start_date< next_vax_date) 
