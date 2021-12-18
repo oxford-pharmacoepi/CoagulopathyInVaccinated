@@ -1,12 +1,13 @@
 # connect -----
 conn <- connect(connectionDetails)
+
 # instantiate exposure cohorts -----
 CohortsToCreate <- suppressMessages(read_csv("1_InstantiateCohorts/ExposureCohorts/CohortsToCreate.csv"))
 exposure.cohorts<-tibble(id=CohortsToCreate$cohortId,
                         file=paste0(CohortsToCreate$name, ".sql"),
                         name=CohortsToCreate$name)
 if(run.as.test==TRUE){
-exposure.cohorts <-  head(exposure.cohorts, 1)
+  exposure.cohorts<-exposure.cohorts %>% filter(name=="dose1_pfizer")
 }
 
 if(create.exposure.cohorts==TRUE){
@@ -70,8 +71,9 @@ CohortsToCreate <- suppressMessages(read_csv("1_InstantiateCohorts/OutcomeCohort
 outcome.cohorts<-tibble(id=CohortsToCreate$cohortId,
                         file=paste0(CohortsToCreate$name, ".sql"),
                         name=CohortsToCreate$name)
+
 if(run.as.test==TRUE){
-outcome.cohorts <-  head(outcome.cohorts, 1)
+  outcome.cohorts<-outcome.cohorts %>% filter(name=="DVT narrow")
 }
 
 if(create.outcome.cohorts==TRUE){
@@ -155,12 +157,6 @@ cond.names<-c("autoimmune_disease",
               "copd",
               "dementia")
 
-if(run.as.test==TRUE){
-cond.codes<-c("434621",
-              "4182210")
-cond.names<-c("autoimmune_disease",
-              "dementia")
-}
 
 if(create.profile.cohorts==TRUE){
 # create empty table
@@ -265,13 +261,6 @@ drug.names<-c("antiinflamatory_and_antirheumatic",
               "tamoxifen",
               "sex_hormones_modulators",
               "immunoglobulins")
-
-if(run.as.test==TRUE){
-drug.codes<-c("21603933",
-              "21601254")
-drug.names<-c("antiinflamatory_and_antirheumatic",
-              "immunoglobulins")
-}
 
 if(create.profile.cohorts==TRUE){
 # create empty table
@@ -394,12 +383,6 @@ covid.cohorts_db<-tbl(db, sql(paste0("SELECT * FROM ",
                                         results_database_schema,".",
                                         cohortTableCovid)))%>% 
   mutate(cohort_definition_id=as.integer(cohort_definition_id)) 
-
-
-
-
-
-
 
 # disconnect ----
 disconnect(conn)

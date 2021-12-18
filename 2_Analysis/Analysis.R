@@ -1,12 +1,17 @@
 
 # Initiate lists to store output ----
-Patient.characteristcis<-list() # to collect tables of characteristics
-Survival.summary<-list() # to collect cumulative incidence estimates
-Model.estimates<-list() # 
+Patient.characteristcis<-list() 
+Survival.summary<-list() 
+Model.estimates<-list()  
+Cohort.age.plot.data<-list()
 
 # run through exposures and outcomes ----
-for(i in 1:2){  
-# for(i in 1:length(study.cohorts$id)){  
+n.sudy.cohorts.to.run<-ifelse(instantiate.cohorts.as.test==TRUE,1,
+                              length(study.cohorts$id) )
+n.outcomes.to.run<-ifelse(instantiate.cohorts.as.test==TRUE,1,
+                              length(outcome.cohorts$id) )
+
+for(i in 1:n.sudy.cohorts.to.run){  
 working.study.cohort.id<-  study.cohorts$id[i]
 working.study.cohort<-  study.cohorts$name[i]
 print(paste0("Running anyalsis for: ", working.study.cohort, " (", i, " of ", 
@@ -654,8 +659,35 @@ Pop.summary.characteristics.with.history<-get.summary.characteristics(
   Pop %>% filter(prior_obs_years>=1),
   "Overall")
 
+# age plot data -----
+get.age.plot.data<-function(working.data){
+ggplot_build(working.data %>%
+  ggplot(aes(x = age),
+              environment = environment())+
+  geom_histogram(binwidth = 3))$data[[1]]
+}
+
+
+Cohort.age.plot.data[[paste0(working.study.cohort,";","No.prior.obs", ";", "pop.all")]]<-
+  get.age.plot.data(working.data=Pop) %>% 
+    mutate(pop.type="All") %>% 
+    mutate(prior.obs.required="No") %>% 
+    mutate(pop=working.study.cohort) 
+Cohort.age.plot.data[[paste0(working.study.cohort,";","prior.obs", ";", "pop.all")]]<-
+  get.age.plot.data(working.data=Pop %>% filter(prior_obs_years>=1)) %>% 
+    mutate(pop.type="All") %>% 
+    mutate(prior.obs.required="Yes") %>% 
+    mutate(pop=working.study.cohort) 
+
+
+# Cohort.age.plot.data[[paste0(working.study.cohort,";","No.prior.obs", ";", "pop.all")]] %>%
+#   ggplot()+
+#   geom_col(aes(xmax, density), width=3, colour="grey")
+
+
 # results for each outcome of interest -----
-for(j in 1:length(outcome.cohorts$id)){ # for each outcome of interest
+
+for(j in 1:n.outcomes.to.run){ # for each outcome of interest
 working.outcome<-outcome.cohorts$id[j]
 working.outcome.name<-outcome.cohorts$name[j]
   
@@ -769,6 +801,7 @@ working.Pop<-working.Pop %>%
 #                   max(f_u.outcome.days))
       
 # working.Pop.w.outcome -----
+# working.Pop.w_o.outcome<-working.Pop %>% filter(f_u.outcome==0) 
 working.Pop.w.outcome<-working.Pop %>% filter(f_u.outcome==1) 
       
 # summarise characteristics -----
@@ -783,6 +816,27 @@ Pop.summary.characteristics.with.history<-left_join(Pop.summary.characteristics.
                                                                                         filter(prior_obs_years>=1), working.outcome.name),
                                                           by="var")
 
+
+# age plot data -----
+if(nrow(working.Pop.w.outcome) >30 ) {
+Cohort.age.plot.data[[paste0(working.study.cohort,";","No.prior.obs", ";", "pop.all", ";",working.outcome.name)]]<-
+  get.age.plot.data(working.data=working.Pop.w.outcome ) %>% 
+    mutate(pop.type="All") %>% 
+    mutate(prior.obs.required="No")  %>% 
+    mutate(pop=paste0(working.study.cohort,";",working.outcome.name))
+}
+
+if(nrow(working.Pop.w.outcome %>% filter(prior_obs_years>=1)) >30 ) {
+Cohort.age.plot.data[[paste0(working.study.cohort,";","prior.obs", ";", "pop.all", ";",working.outcome.name)]]<-
+  get.age.plot.data(working.data=working.Pop.w.outcome  %>%
+                      filter(prior_obs_years>=1)) %>% 
+    mutate(pop.type="All") %>% 
+    mutate(prior.obs.required="Yes") %>% 
+    mutate(pop=paste0(working.study.cohort,";",working.outcome.name))
+}
+# Cohort.age.plot.data[[paste0(working.study.cohort,";","No.prior.obs", ";", "pop.all", ";",working.outcome.name)]] %>%
+#   ggplot()+
+#   geom_col(aes(xmax, density), width=3, colour="grey")
 
 # KM Cumulative incidence ------
 get.Surv.summaries<-function(working.data,
@@ -1099,7 +1153,6 @@ Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prio
                      value.working.study.cohort=working.study.cohort)
 }
 # modelling  ------
-
 print(" -- Fitting models")
 dd<<-datadist(working.Pop %>% 
                 select(-c("day_of_birth", "month_of_birth", "next_vax_date",
@@ -1118,16 +1171,27 @@ m.age.rcs.3<-lrm(f_u.outcome ~ rcs(age,3),
 age.fit<-ifelse(BIC(m.age.linear)<=BIC(m.age.rcs.3),
        "age", "rcs(age,3)")
 # interaction between age and sex
+a<-anova(lrm(as.formula(paste("f_u.outcome~age_gr2*gender")),
+       x=TRUE,y=TRUE,  maxit=100000,
+       data = working.data))
+interaction<-data.frame(a)[6,3]<0.05
+
 age.gender.f<-paste0(age.fit, "+ gender")
 
 # 1) age, stratified by gender
 # without competing risk
+if(interaction==TRUE){
 m.age.male<-lrm(as.formula(paste("f_u.outcome~", age.fit)),
        x=TRUE,y=TRUE,  maxit=100000,
        data = working.data %>% filter(gender=="Male"))
 m.age.female<-lrm(as.formula(paste("f_u.outcome~", age.fit)),
        x=TRUE,y=TRUE,  maxit=100000,
-       data = working.data %>% filter(gender=="Female"))
+       data = working.data %>% filter(gender=="Female"))  
+} else {
+ m.age<-lrm(as.formula(paste("f_u.outcome~", age.fit)),
+       x=TRUE,y=TRUE,  maxit=100000,
+       data = working.data)
+}
 
 # summarise relative hazard ratios for age
 ages<-seq(20,90, 5)
@@ -1135,12 +1199,19 @@ ref.age<-65
 
 working.summary.age.male<-list()
 for(age.i in 1:length(ages)){
-# w/o competing risk
+if(interaction==TRUE){
 working.summary.age.male[[paste0(age.i, ".overall")]]<-head(as.data.frame(summary(m.age.male, 
         age=c(65,ages[age.i]),
         antilog=FALSE)),1)   %>% 
   mutate(model.type="overall")
+} else {
+working.summary.age.male[[paste0(age.i, ".overall")]]<-head(as.data.frame(summary(m.age, 
+        age=c(65,ages[age.i]),
+        antilog=FALSE)),1)   %>% 
+  mutate(model.type="overall")
+  } 
 }
+
 working.summary.age.male<-bind_rows(working.summary.age.male) %>% 
   mutate(or=exp(Effect),
          or.low=exp(`Lower 0.95`),
@@ -1153,11 +1224,17 @@ working.summary.age.male<-bind_rows(working.summary.age.male) %>%
 
 working.summary.age.female<-list()
 for(age.i in 1:length(ages)){
-# w/o competing risk
+if(interaction==TRUE){
 working.summary.age.female[[paste0(age.i, ".overall")]]<-head(as.data.frame(summary(m.age.female, 
         age=c(65,ages[age.i]),
         antilog=FALSE)),1)   %>% 
   mutate(model.type="overall")
+} else {
+working.summary.age.female[[paste0(age.i, ".overall")]]<-head(as.data.frame(summary(m.age, 
+        age=c(65,ages[age.i]),
+        antilog=FALSE)),1)   %>% 
+  mutate(model.type="overall")
+  } 
 }
 working.summary.age.female<-bind_rows(working.summary.age.female) %>% 
   mutate(or=exp(Effect),
@@ -1169,12 +1246,12 @@ working.summary.age.female<-bind_rows(working.summary.age.female) %>%
   mutate(gender="Female")
 
 working.summary.age<-bind_rows(working.summary.age.male, working.summary.age.female)
-# working.summary.age %>%
-#   ggplot()+
-#   facet_grid(. ~ model.type)+
-#   geom_line(aes(rel.age, or, colour=gender))+
-#   geom_line(aes(rel.age, or.low, colour=gender), linetype="dashed")+
-#   geom_line(aes(rel.age, or.high, colour=gender), linetype="dashed")
+working.summary.age %>%
+  ggplot()+
+  facet_grid(. ~ model.type)+
+  geom_line(aes(rel.age, or, colour=gender))+
+  geom_line(aes(rel.age, or.low, colour=gender), linetype="dashed")+
+  geom_line(aes(rel.age, or.high, colour=gender), linetype="dashed")
 
 # 2 gender
 # unadjusted 

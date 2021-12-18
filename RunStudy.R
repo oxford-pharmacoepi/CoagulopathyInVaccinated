@@ -1,3 +1,4 @@
+start<-Sys.time()
 # functions ----
 # printing numbers with 1 decimal place and commas 
 nice.num<-function(x) {
@@ -50,6 +51,7 @@ cohortTableComorbidities<-paste0(cohortTableStem, "Comorbidities")
 cohortTableCovid<-paste0(cohortTableStem, "Covid")
 cohortTableMedicationstmp<-paste0(cohortTableStem, "Medicationstmp")
 cohortTableMedications<-paste0(cohortTableStem, "Medications")
+cohortTableLargeScaleFeatures<-paste0(cohortTableStem, "LSF")
 
 # instantiate study cohorts ----
 source(here("1_InstantiateCohorts","InstantiateStudyCohorts.R"))
@@ -78,6 +80,7 @@ study.cohorts<-bind_rows(
   "mRNA second-dose after viral vector first-dose")) %>% 
   mutate(id=((nrow(exposure.cohorts)+1):c(nrow(exposure.cohorts)+7))))
   
+
 # get database end date -----
 db.end.date<-observation_period_db %>% 
     summarise(max(observation_period_end_date, na.rm=TRUE)) %>% 
@@ -95,7 +98,7 @@ Survival.summary<-Survival.summary %>%
            outcome.name,prior.obs.required, surv.type) %>% 
   mutate(cum.n.event=cumsum(n.event))
 
-
+Cohort.age.plot.data<-bind_rows(Cohort.age.plot.data, .id = NULL)
 
 
 
@@ -108,6 +111,8 @@ save(Survival.summary,
      file = paste0(output.folder, "/Survival.summary_", db.name, ".RData"))
 save(Model.estimates, 
      file = paste0(output.folder, "/Model.estimates_", db.name, ".RData"))
+save(Cohort.age.plot.data, 
+     file = paste0(output.folder, "/Cohort.age.plot.data_", db.name, ".RData"))
 
 # # zip results
 print("Zipping results to output folder")
@@ -117,7 +122,8 @@ zipName <- paste0(output.folder, "/OutputToShare_", db.name, ".zip")
 
 files<-c(paste0(output.folder, "/Patient.characteristcis_", db.name, ".RData"),
          paste0(output.folder, "/Survival.summary_", db.name, ".RData"),
-         paste0(output.folder, "/Model.estimates_", db.name, ".RData") )
+         paste0(output.folder, "/Model.estimates_", db.name, ".RData") ,
+         paste0(output.folder, "/Cohort.age.plot.data_", db.name, ".RData") )
 files <- files[file.exists(files)==TRUE]
 createZipFile(zipFile = zipName,
               rootFolder=output.folder,
@@ -126,3 +132,4 @@ createZipFile(zipFile = zipName,
 print("Done!")
 print("-- If all has worked, there should now be a zip folder with your results in the output folder to share")
 print("-- Thank you for running the study!")
+Sys.time()-start
