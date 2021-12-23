@@ -81,6 +81,12 @@ study.cohorts<-bind_rows(
   mutate(id=((nrow(exposure.cohorts)+1):c(nrow(exposure.cohorts)+7))))
   
 
+# get earliest vaccine ----
+earliest.date<-exposure.cohorts_db %>% 
+  summarise(vax.start.date=min(cohort_start_date, na.rm=TRUE)) %>% 
+  collect() %>% pull() 
+earliest.date<-dmy(format(earliest.date, "%d/%m/%Y"))
+
 # get database end date -----
 db.end.date<-observation_period_db %>% 
     summarise(max(observation_period_end_date, na.rm=TRUE)) %>% 

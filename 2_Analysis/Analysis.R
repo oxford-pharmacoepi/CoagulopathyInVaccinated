@@ -6,9 +6,9 @@ Model.estimates<-list()
 Cohort.age.plot.data<-list()
 
 # run through exposures and outcomes ----
-n.sudy.cohorts.to.run<-ifelse(instantiate.cohorts.as.test==TRUE,1,
+n.sudy.cohorts.to.run<-ifelse(run.as.test==TRUE,1,
                               length(study.cohorts$id) )
-n.outcomes.to.run<-ifelse(instantiate.cohorts.as.test==TRUE,1,
+n.outcomes.to.run<-ifelse(run.as.test==TRUE,1,
                               length(outcome.cohorts$id) )
 
 for(i in 1:n.sudy.cohorts.to.run){  
@@ -468,6 +468,7 @@ covid.cohorts<-covid.cohorts_db %>%
                select(person_id)) %>% 
   collect()
 
+if(nrow(covid.cohorts)>0){
 # add index
 covid.cohorts<-covid.cohorts %>% 
   left_join(Pop %>% select(person_id, cohort_start_date)) %>% 
@@ -480,6 +481,10 @@ covid.cohorts<-covid.cohorts %>%
 Pop<-Pop %>% 
   left_join(covid.cohorts,
              by = "person_id")
+} else {
+  Pop$covid.year_prior<-NA
+  
+}
 
 Pop<-Pop %>% 
   mutate(covid.year_prior=ifelse(is.na(covid.year_prior), 0,1))
@@ -566,6 +571,11 @@ Pop<-Pop %>%
   mutate(cond.drug.comp=ifelse(cond.drug.comp==0, 0, 1))
 
 
+# add months since start -----
+Pop<-Pop %>% 
+  mutate(months_since_start=as.period(interval(earliest.date,cohort_start_date)),
+         unit="day") %>% 
+  mutate(months_since_start=months_since_start/ as.period(months(1))) 
 # summarise characteristics -----
 get.summary.characteristics<-function(working.data, working.name){
 
@@ -1161,6 +1171,9 @@ dd<<-datadist(working.Pop %>%
 
 get.models<-function(working.data){
 
+n.tot<-working.data  %>% tally() %>% pull()
+n.w.outcome <-working.data %>% filter(f_u.outcome==1) %>% tally()  %>% pull() 
+  
 # choose whether to fit age as linear or with rcs (3 knots)
 m.age.linear<-lrm(f_u.outcome ~ age,
        x=TRUE,y=TRUE,  maxit=100000,
@@ -1178,8 +1191,7 @@ interaction<-data.frame(a)[6,3]<0.05
 
 age.gender.f<-paste0(age.fit, "+ gender")
 
-# 1) age, stratified by gender
-# without competing risk
+# 1.1 age, stratified by gender 
 if(interaction==TRUE){
 m.age.male<-lrm(as.formula(paste("f_u.outcome~", age.fit)),
        x=TRUE,y=TRUE,  maxit=100000,
@@ -1192,6 +1204,8 @@ m.age.female<-lrm(as.formula(paste("f_u.outcome~", age.fit)),
        x=TRUE,y=TRUE,  maxit=100000,
        data = working.data)
 }
+
+
 
 # summarise relative hazard ratios for age
 ages<-seq(20,90, 5)
@@ -1213,12 +1227,14 @@ working.summary.age.male[[paste0(age.i, ".overall")]]<-head(as.data.frame(summar
 }
 
 working.summary.age.male<-bind_rows(working.summary.age.male) %>% 
-  mutate(or=exp(Effect),
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
          or.low=exp(`Lower 0.95`),
          or.high=exp(`Upper 0.95`)) %>% 
   mutate(ref.age=Low,
          rel.age=High) %>% 
-  select(or, or.low, or.high, ref.age, rel.age, model.type) %>%  
+  select(n.tot, n.w.outcome, or, or.low, or.high, ref.age, rel.age, model.type) %>%  
   mutate(gender="Male")
 
 
@@ -1237,21 +1253,42 @@ working.summary.age.female[[paste0(age.i, ".overall")]]<-head(as.data.frame(summ
   } 
 }
 working.summary.age.female<-bind_rows(working.summary.age.female) %>% 
-  mutate(or=exp(Effect),
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
          or.low=exp(`Lower 0.95`),
          or.high=exp(`Upper 0.95`)) %>% 
   mutate(ref.age=Low,
          rel.age=High) %>% 
-  select(or, or.low, or.high, ref.age, rel.age, model.type) %>%  
+  select(n.tot, n.w.outcome, or, or.low, or.high, ref.age, rel.age, model.type) %>%  
   mutate(gender="Female")
 
 working.summary.age<-bind_rows(working.summary.age.male, working.summary.age.female)
-working.summary.age %>%
-  ggplot()+
-  facet_grid(. ~ model.type)+
-  geom_line(aes(rel.age, or, colour=gender))+
-  geom_line(aes(rel.age, or.low, colour=gender), linetype="dashed")+
-  geom_line(aes(rel.age, or.high, colour=gender), linetype="dashed")
+# working.summary.age %>%
+#   ggplot()+
+#   facet_grid(. ~ model.type)+
+#   geom_line(aes(rel.age, or, colour=gender))+
+#   geom_line(aes(rel.age, or.low, colour=gender), linetype="dashed")+
+#   geom_line(aes(rel.age, or.high, colour=gender), linetype="dashed")
+
+
+# 1.2 age categories
+m.age.cat<-lrm(as.formula(paste("f_u.outcome~", "age_gr2")),
+       x=TRUE,y=TRUE,  maxit=100000,
+       data = working.data)
+
+
+working.summary.age_gr<-head(as.data.frame(summary(m.age.cat, age_gr2='<=44', antilog=FALSE)),2) %>% 
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
+         or.low=exp(`Lower 0.95`),
+         or.high=exp(`Upper 0.95`)) %>% 
+  select(n.tot, n.w.outcome,or, or.low, or.high)%>%  
+  mutate(model=c("Unadjusted;45-64","Unadjusted;>=65"))  %>% 
+  mutate(model.type="overall")
+
+
 
 # 2 gender
 # unadjusted 
@@ -1265,19 +1302,23 @@ m.adj<-lrm(as.formula(paste("f_u.outcome~","gender", "+",  age.fit)),
 
 working.summary.gender<- bind_rows(
 head(as.data.frame(summary(m.unadj, gender='Female', antilog=FALSE)),1) %>% 
-  mutate(or=exp(Effect),
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
          or.low=exp(`Lower 0.95`),
          or.high=exp(`Upper 0.95`)) %>% 
-  select(or, or.low, or.high)%>%  
+  select(n.tot, n.w.outcome,or, or.low, or.high)%>%  
   mutate(model="Unadjusted") %>% 
   mutate(model.type="overall"),
 
 tail(as.data.frame(summary(m.adj, gender='Female',antilog=FALSE)),1) %>% 
-  mutate(or=exp(Effect),
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
          or.low=exp(`Lower 0.95`),
          or.high=exp(`Upper 0.95`)) %>% 
-  select(or, or.low, or.high)%>%  
-  mutate(model="Adjusted") %>% 
+  select(n.tot, n.w.outcome, or, or.low, or.high)%>%  
+  mutate(model="Adjusted for age") %>% 
   mutate(model.type="overall")) %>% 
  mutate(var="Sex (Male:Female)")
 
@@ -1287,17 +1328,23 @@ tail(as.data.frame(summary(m.adj, gender='Female',antilog=FALSE)),1) %>%
 get.models.exposures<-function(var){
   if(nrow(working.data %>% 
     filter(!!as.name(var)==1))>5){
-    
+
 m.unadj<-lrm(as.formula(paste("f_u.outcome~",{{var}})),
        x=TRUE,y=TRUE,  maxit=100000,
        data = working.data)
 m.adj<-lrm(as.formula(paste("f_u.outcome~",{{var}}, "+",  age.gender.f)),
        x=TRUE,y=TRUE,  maxit=100000,
        data = working.data)
-    
+m.adj2<-lrm(as.formula(paste("f_u.outcome~",{{var}}, "+",  age.gender.f, 
+                             "+ months_since_start")),
+       x=TRUE,y=TRUE,  maxit=100000,
+       data = working.data)
+
 bind_rows(
 head(as.data.frame(summary(m.unadj, antilog=FALSE)),1) %>% 
-  mutate(or=exp(Effect),
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
          or.low=exp(`Lower 0.95`),
          or.high=exp(`Upper 0.95`)) %>% 
   select(or, or.low, or.high)%>%  
@@ -1305,14 +1352,27 @@ head(as.data.frame(summary(m.unadj, antilog=FALSE)),1) %>%
   mutate(model.type="overall"),
 
 head(as.data.frame(summary(m.adj, antilog=FALSE)),1) %>% 
-  mutate(or=exp(Effect),
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
          or.low=exp(`Lower 0.95`),
          or.high=exp(`Upper 0.95`)) %>% 
   select(or, or.low, or.high)%>%  
-  mutate(model="Adjusted") %>% 
+  mutate(model="Adjusted for age and sex") %>% 
+  mutate(model.type="overall"), 
+
+head(as.data.frame(summary(m.adj2, antilog=FALSE)),1) %>% 
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
+         or.low=exp(`Lower 0.95`),
+         or.high=exp(`Upper 0.95`)) %>% 
+  select(or, or.low, or.high)%>%  
+  mutate(model="Adjusted for age, sex, and calendar time") %>% 
   mutate(model.type="overall")
 ) %>% 
-  mutate(var={{var}})  
+  mutate(var={{var}}) 
+
 
 } else {
    tibble()
@@ -1348,11 +1408,13 @@ working.summary.exposures<- bind_rows(working.summary.exposures)
 
 
 row.names(working.summary.age)<-1:nrow(working.summary.age)
+row.names(working.summary.age_gr)<-1:nrow(working.summary.age_gr)
 row.names(working.summary.gender)<-1:nrow(working.summary.gender)
 if(nrow(working.summary.exposures)>0){ 
 row.names(working.summary.exposures)<-1:nrow(working.summary.exposures)}
 
 bind_rows(working.summary.age,
+          working.summary.age_gr,
           working.summary.gender,
           working.summary.exposures)
 

@@ -1,4 +1,5 @@
 output/*
+output full 20_12/*
 CodeToRun_local.R
 .Rproj.user*
 .Rhistory

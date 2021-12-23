@@ -6,6 +6,7 @@ atlasId,atlasName,cohortId,name
 307,MI,307,MI
 308,PE,308,PE
 309,SVT,309,SVT
+310,thrombocyt,310,thrombocyt
 311,VTE narrow,311,VTE narrow
 401,TTS_ATE,401,TTS_ATE
 402,TTS_CVST,402,TTS_CVST
@@ -15,3 +16,4 @@ atlasId,atlasName,cohortId,name
 406,TTS_PE,406,TTS_PE
 407,TTS_SVT,407,TTS_SVT
 408,TTS_VTE,408,TTS_VTE
+410,TTS_any,410,TTS_any

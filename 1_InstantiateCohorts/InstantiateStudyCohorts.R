@@ -127,7 +127,9 @@ outcome.cohorts<-outcome.cohorts %>%
                select(cohort_definition_id),
              by=c("id"="cohort_definition_id"))  
 
-
+# outcome.cohorts_db %>% 
+#                group_by(cohort_definition_id) %>% 
+#                tally()
 # instantiate comorbidity cohorts ----
 # all condition occurrences for people in exposure cohorts
 cond.codes<-c("434621",
