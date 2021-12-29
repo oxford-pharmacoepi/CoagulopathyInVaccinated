@@ -11,11 +11,15 @@ n.sudy.cohorts.to.run<-ifelse(run.as.test==TRUE,1,
 n.outcomes.to.run<-ifelse(run.as.test==TRUE,1,
                               length(outcome.cohorts$id) )
 
-for(i in 1:n.sudy.cohorts.to.run){  
+for(i in 1:n.sudy.cohorts.to.run){
+# for(i in c(1,12)){  
 working.study.cohort.id<-  study.cohorts$id[i]
 working.study.cohort<-  study.cohorts$name[i]
 print(paste0("Running anyalsis for: ", working.study.cohort, " (", i, " of ", 
              length(study.cohorts$id), ")"))
+info(logger, paste0("Running anyalsis for: ", working.study.cohort, " (", i, " of ", 
+             length(study.cohorts$id), ")"))
+
   
 # Create Pop df ----
 if(working.study.cohort %in% c("dose1_AZ", "dose1_moderna", "dose1_pfizer" )){
@@ -292,6 +296,29 @@ working.exposure.cohorts_db<-working.exposure.cohorts_db %>%
   mutate("next_vax_date"=as.Date(NA))
 }
 
+if(working.study.cohort=="General population 2017"){
+ids.to.collect<-exposure.cohorts %>% 
+  filter(name=="General population 2017") %>% 
+  select(id) %>% 
+  pull()
+working.exposure.cohorts_db<-exposure.cohorts_db %>% 
+               filter(cohort_definition_id %in% !!ids.to.collect ) %>% 
+               select(subject_id,cohort_start_date,cohort_definition_id) %>% 
+               rename("person_id"="subject_id")
+# first 
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  group_by(person_id) %>% 
+  slice_min(cohort_start_date, n = 1) %>% 
+  ungroup()%>% 
+  distinct()
+rm(ids.to.collect)
+
+# no subsequent vax
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  mutate("next_vax_date"=as.Date(NA))
+}
+
+
 Pop<-person_db %>% 
   inner_join(working.exposure.cohorts_db,
              by = "person_id") %>% 
@@ -420,6 +447,7 @@ for(n in 1:length(cond.codes)){# add each to Pop
 working.code<-cond.codes[n]
 working.name<-cond.names[n]
 print(paste0("-- Getting history of ",working.name ," for ", working.study.cohort))
+info(logger, paste0("-- Getting history of ",working.name ," for ", working.study.cohort))
 
 working.persons.all.history <- cohortTableComorbidities_db %>%
   rename("person_id"="subject_id") %>% 
@@ -469,6 +497,10 @@ covid.cohorts<-covid.cohorts_db %>%
   collect()
 
 if(nrow(covid.cohorts)>0){
+covid.cohorts<-covid.cohorts %>% 
+  mutate(y_covid_date=year(covid_date)) %>% 
+  filter(y_covid_date>=2020)
+# min(covid.cohort$covid_date)
 # add index
 covid.cohorts<-covid.cohorts %>% 
   left_join(Pop %>% select(person_id, cohort_start_date)) %>% 
@@ -477,13 +509,15 @@ covid.cohorts<-covid.cohorts %>%
   select(person_id) %>% 
   distinct() %>% 
   mutate(covid.year_prior=1)
+}
+
+if(nrow(covid.cohorts)>0){
 #add
 Pop<-Pop %>% 
   left_join(covid.cohorts,
              by = "person_id")
 } else {
   Pop$covid.year_prior<-NA
-  
 }
 
 Pop<-Pop %>% 
@@ -498,6 +532,7 @@ working.code<-drug.codes[n]
 working.name<-drug.names[n]
 
 print(paste0("-- Getting history of ",working.name ," for ", working.study.cohort))
+info(logger, paste0("-- Getting history of ",working.name ," for ", working.study.cohort))
 
 working.persons <- cohortTableMedications_db %>% 
   filter(cohort_definition_id==working.code)%>%  
@@ -572,10 +607,17 @@ Pop<-Pop %>%
 
 
 # add months since start -----
+if(working.study.cohort=="General population 2017"){
+ Pop<-Pop %>% 
+  mutate(months_since_start=NA) 
+} else {
 Pop<-Pop %>% 
   mutate(months_since_start=as.period(interval(earliest.date,cohort_start_date)),
          unit="day") %>% 
-  mutate(months_since_start=months_since_start/ as.period(months(1))) 
+  mutate(months_since_start=months_since_start/ as.period(months(1)))   
+}
+
+
 # summarise characteristics -----
 get.summary.characteristics<-function(working.data, working.name){
 
@@ -584,6 +626,18 @@ summary.characteristics1<-data.frame(Overall=t(working.data %>%
                            summarise(n=nice.num.count(length(person_id)),
                                      min.index.date=min(cohort_start_date),
                                      max.index.date=max(cohort_start_date),
+                                     index.az=paste0(nice.num.count(sum(str_detect(vax_type,"AZ"))),
+                                                      " (",  nice.num((sum(str_detect(vax_type,"AZ"))/
+                                                                         length(person_id))*100),  "%)"),
+                                     index.jnj=paste0(nice.num.count(sum(str_detect(vax_type,"janssen"))),
+                                                      " (",  nice.num((sum(str_detect(vax_type,"janssen"))/
+                                                                         length(person_id))*100),  "%)"),
+                                     index.pfizer=paste0(nice.num.count(sum(str_detect(vax_type,"pfizer"))),
+                                                      " (",  nice.num((sum(str_detect(vax_type,"pfizer"))/
+                                                                         length(person_id))*100),  "%)"),
+                                     index.mrna=paste0(nice.num.count(sum(str_detect(vax_type,"moderna"))),
+                                                      " (",  nice.num((sum(str_detect(vax_type,"moderna"))/
+                                                                         length(person_id))*100),  "%)"),
                                      age=paste0(nice.num.count(median(age)),  " [",
                                                 nice.num.count(quantile(age,probs=0.25)),  " to ",
                                                 nice.num.count(quantile(age,probs=0.75)),   "]" ), 
@@ -698,11 +752,15 @@ Cohort.age.plot.data[[paste0(working.study.cohort,";","prior.obs", ";", "pop.all
 # results for each outcome of interest -----
 
 for(j in 1:n.outcomes.to.run){ # for each outcome of interest
+# for(j in 1:2){
 working.outcome<-outcome.cohorts$id[j]
 working.outcome.name<-outcome.cohorts$name[j]
   
 print(paste0("- Getting ", working.outcome.name,
                " (", j, " of ", length(outcome.cohorts$id), ")"))
+info(logger, paste0("- Getting ", working.outcome.name,
+               " (", j, " of ", length(outcome.cohorts$id), ")"))
+
 working.Pop<-Pop 
 
 # event of interest
@@ -718,7 +776,9 @@ if(working.outcomes %>%
                 rename("subject_id"="person_id")) %>% 
      tally() %>% 
      pull()<5){
-    print(paste0("Less than five occurrences of ", working.outcome.name, " among study population"))
+  print(paste0("Less than five occurrences of ", working.outcome.name, " among study population"))
+  info(logger, paste0("Less than five occurrences of ", working.outcome.name, " among study population"))
+
   } else {
     # continue only if occurrences of outcome
     
@@ -755,6 +815,18 @@ working.Pop<-working.Pop %>%
       mutate(history_outcome=ifelse(is.na(history_outcome),0,1))
     
 # first event after index date up to  -----
+if(working.study.cohort=="General population 2017"){
+f_u.outcome<-working.outcomes %>%  
+        inner_join(working.Pop %>% 
+                     select(person_id,cohort_start_date, 
+                            next_vax_date) %>% 
+                     rename("subject_id"="person_id") %>% 
+                     rename("Pop_cohort_start_date"="cohort_start_date"))  %>% 
+    #within 2 years
+        filter(cohort_start_date>= Pop_cohort_start_date) %>% 
+        filter(cohort_start_date<= (Pop_cohort_start_date+years(2)))
+
+} else {
 f_u.outcome<-working.outcomes %>%  
         inner_join(working.Pop %>% 
                      select(person_id,cohort_start_date, 
@@ -767,7 +839,7 @@ f_u.outcome<-working.outcomes %>%
    #  on or after next vax
         filter(is.na(next_vax_date) |
           cohort_start_date< next_vax_date) 
-
+}
 
 if(nrow(f_u.outcome)>=5){ 
 f_u.outcome<-f_u.outcome %>% 
@@ -786,11 +858,19 @@ working.Pop<-working.Pop %>%
       # sum(working.Pop$f_u.outcome)
       
 # TAR -----
-# will be from the 1st vaccination date to 28-days or 
+# will be from the 1st vaccination date to 28-days (2 years for general pop) or 
 # the earliest of experiencing outcome, 
 # the last data availability date or the date of 2nd vaccination. 
 
+if(working.study.cohort=="General population 2017"){
 working.Pop<-working.Pop %>%
+          mutate(f_u.outcome_date=
+                   if_else(f_u.outcome==1,f_u.outcome_date, 
+                  if_else(observation_period_end_date < (cohort_start_date+years(2)),
+                            observation_period_end_date, 
+                            (cohort_start_date+years(2)) )))
+} else {
+ working.Pop<-working.Pop %>%
           mutate(f_u.outcome_date=
                    if_else(f_u.outcome==1,f_u.outcome_date, 
                    if_else(!is.na(next_vax_date) &
@@ -798,7 +878,10 @@ working.Pop<-working.Pop %>%
                             next_vax_date,
                   if_else(observation_period_end_date < (cohort_start_date+days(28)),
                             observation_period_end_date, 
-                            (cohort_start_date+days(28)) ))))
+                            (cohort_start_date+days(28)) )))) 
+  
+}
+
 
 working.Pop<-working.Pop %>% 
         mutate(f_u.outcome.days=as.numeric(difftime(f_u.outcome_date,
@@ -860,7 +943,7 @@ get.Surv.summaries<-function(working.data,
   if(nrow(working.data)>=5){
   # add to working.Survival.summary
   working.Survival.summary<-list()
-  working.times<-seq(0,28)
+  working.times<-seq(0,max(working.data$f_u.outcome.days))
   
   #overall
   #km method
@@ -1164,10 +1247,18 @@ Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prio
 }
 # modelling  ------
 print(" -- Fitting models")
-dd<<-datadist(working.Pop %>% 
-                select(-c("day_of_birth", "month_of_birth", "next_vax_date",
-                         "cohort_definition_id" ))); options(datadist = "dd" )
+info(logger," -- Fitting models")
 
+if(working.study.cohort=="General population 2017"){
+dd<<-suppressWarnings( datadist(working.Pop %>% 
+                select(-c("day_of_birth", "month_of_birth", "next_vax_date",
+                         "cohort_definition_id",
+                         "months_since_start")))); options(datadist = "dd" )  
+} else { 
+dd<<-suppressWarnings( datadist(working.Pop %>% 
+                select(-c("day_of_birth", "month_of_birth", "next_vax_date",
+                         "cohort_definition_id" )))); options(datadist = "dd" )
+}
 
 get.models<-function(working.data){
 
@@ -1335,11 +1426,15 @@ m.unadj<-lrm(as.formula(paste("f_u.outcome~",{{var}})),
 m.adj<-lrm(as.formula(paste("f_u.outcome~",{{var}}, "+",  age.gender.f)),
        x=TRUE,y=TRUE,  maxit=100000,
        data = working.data)
+if(nrow(working.data %>% 
+    filter(!is.na(months_since_start)))>0){
 m.adj2<-lrm(as.formula(paste("f_u.outcome~",{{var}}, "+",  age.gender.f, 
                              "+ months_since_start")),
        x=TRUE,y=TRUE,  maxit=100000,
-       data = working.data)
+       data = working.data) }
 
+if(nrow(working.data %>% 
+    filter(!is.na(months_since_start)))>0){
 bind_rows(
 head(as.data.frame(summary(m.unadj, antilog=FALSE)),1) %>% 
   mutate(n.tot=n.tot,
@@ -1372,6 +1467,33 @@ head(as.data.frame(summary(m.adj2, antilog=FALSE)),1) %>%
   mutate(model.type="overall")
 ) %>% 
   mutate(var={{var}}) 
+} else {
+  
+bind_rows(
+head(as.data.frame(summary(m.unadj, antilog=FALSE)),1) %>% 
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
+         or.low=exp(`Lower 0.95`),
+         or.high=exp(`Upper 0.95`)) %>% 
+  select(or, or.low, or.high)%>%  
+  mutate(model="Unadjusted") %>% 
+  mutate(model.type="overall"),
+
+head(as.data.frame(summary(m.adj, antilog=FALSE)),1) %>% 
+  mutate(n.tot=n.tot,
+         n.w.outcome=n.w.outcome,
+         or=exp(Effect),
+         or.low=exp(`Lower 0.95`),
+         or.high=exp(`Upper 0.95`)) %>% 
+  select(or, or.low, or.high)%>%  
+  mutate(model="Adjusted for age and sex") %>% 
+  mutate(model.type="overall")
+) %>% 
+  mutate(var={{var}})   
+  
+  
+}
 
 
 } else {

@@ -12,6 +12,7 @@ if(run.as.test==TRUE){
 
 if(create.exposure.cohorts==TRUE){
 print(paste0("- Getting exposure cohorts"))
+info(logger, "- Getting exposure cohorts")
 
 # create empty cohorts table
 sql<-readSql(here("1_InstantiateCohorts","ExposureCohorts","sql","CreateCohortTable.sql"))
@@ -26,6 +27,9 @@ for(cohort.i in 1:length(exposure.cohorts$id)){
 working.id<-exposure.cohorts$id[cohort.i]
 print(paste0("-- Getting: ",  exposure.cohorts$name[cohort.i],
                  " (", cohort.i, " of ", length(exposure.cohorts$name), ")"))
+info(logger, paste0("-- Getting: ",  exposure.cohorts$name[cohort.i],
+                 " (", cohort.i, " of ", length(exposure.cohorts$name), ")"))
+
 
 sql<-readSql(here("1_InstantiateCohorts","ExposureCohorts","sql",exposure.cohorts$file[cohort.i])) 
 sql <- sub("BEGIN: Inclusion Impact Analysis - event.*END: Inclusion Impact Analysis - person", "", sql)
@@ -43,6 +47,8 @@ renderTranslateExecuteSql(conn=conn,
 
 } else {
   print(paste0("Skipping creating exposure cohorts")) 
+  info(logger, "Skipping creating exposure cohorts")
+
 }
 
 # link to table
@@ -78,6 +84,7 @@ if(run.as.test==TRUE){
 
 if(create.outcome.cohorts==TRUE){
 print(paste0("- Getting outcome cohorts"))
+info(logger, "- Getting outcome cohorts")
 
 # create empty cohorts table
 sql<-readSql(here("1_InstantiateCohorts","OutcomeCohorts","sql","CreateCohortTable.sql"))
@@ -91,6 +98,8 @@ rm(sql)
 for(cohort.i in 1:length(outcome.cohorts$id)){
   working.id<-outcome.cohorts$id[cohort.i]
   print(paste0("-- Getting: ",  outcome.cohorts$name[cohort.i],
+               " (", cohort.i, " of ", length(outcome.cohorts$name), ")"))
+  info(logger, paste0("-- Getting: ",  outcome.cohorts$name[cohort.i],
                " (", cohort.i, " of ", length(outcome.cohorts$name), ")"))
   
   sql<-readSql(here("1_InstantiateCohorts","OutcomeCohorts", "sql",outcome.cohorts$file[cohort.i])) 
@@ -106,7 +115,9 @@ for(cohort.i in 1:length(outcome.cohorts$id)){
                             target_cohort_id = working.id)  
 }
 } else {
-  print(paste0("Skipping creating exposure cohorts")) 
+  print(paste0("Skipping creating exposure cohorts"))
+  info(logger, "Skipping creating exposure cohorts")
+
 }
 
 
@@ -201,6 +212,8 @@ working.cond.db<-working.cond.db %>%
 
 # insert into  table
 print(paste0("-- Getting ", cond.names[i]))
+info(logger, paste0("-- Getting ", cond.names[i]))
+
 start.insert<-Sys.time()
 # insert into tmp table
 
@@ -226,10 +239,13 @@ DBI::dbExecute(db, sql_query)
 
 duration <- Sys.time()-start.insert
 print(paste("--- Getting", cond.names[i], "took",  round(duration[[1]], 2),  units(duration)))
+info(logger, paste("--- Getting", cond.names[i], "took",  round(duration[[1]], 2),  units(duration)))
 
 }
 } else {
    print(paste0("Skipping creating comorbidity cohorts")) 
+  info(logger, "Skipping creating comorbidity cohorts")
+
  }
 
 cohortTableComorbidities_db<- tbl(db, sql(paste0("SELECT * FROM ",  results_database_schema,
@@ -301,6 +317,8 @@ working.drug.db<-drug_era_db  %>%
   
 # insert into  table
 print(paste0("-- Getting ", drug.names[i]))
+info(logger, paste0("-- Getting ", drug.names[i]))
+
 start.insert<-Sys.time()
 # insert into tmp table
 
@@ -326,10 +344,13 @@ DBI::dbExecute(db, sql_query)
 
 duration <- Sys.time()-start.insert
 print(paste("--- Getting", drug.names[i], "took",  round(duration[[1]], 2),  units(duration)))
+info(logger, paste("--- Getting", drug.names[i], "took",  round(duration[[1]], 2),  units(duration)))
 
 }
 } else {
    print(paste0("Skipping creating medication cohorts")) 
+  info(logger, paste0("Skipping creating medication cohorts"))
+
  }
 
 cohortTableMedications_db<- tbl(db, sql(paste0("SELECT * FROM ",  results_database_schema,
@@ -347,6 +368,8 @@ covid.cohorts<-tibble(id=as.integer(1:length(cohort.sql)),
 
 if(create.profile.cohorts==TRUE){
 print(paste0("- Getting covid cohorts"))
+info(logger,paste0("- Getting covid cohorts"))
+
 
 # create empty cohorts table
 sql<-readSql(here("1_InstantiateCohorts","CovidCohorts","sql","CreateCohortTable.sql"))
@@ -361,6 +384,9 @@ for(cohort.i in 1:length(covid.cohorts$id)){
   working.id<-outcome.cohorts$id[cohort.i]
   print(paste0("-- Getting: ",  covid.cohorts$name[cohort.i],
                " (", cohort.i, " of ", length(covid.cohorts$name), ")"))
+  info(logger,paste0("-- Getting: ",  covid.cohorts$name[cohort.i],
+               " (", cohort.i, " of ", length(covid.cohorts$name), ")"))
+
   
   sql<-readSql(here("1_InstantiateCohorts","CovidCohorts", "sql",covid.cohorts$file[cohort.i])) 
   sql <- sub("BEGIN: Inclusion Impact Analysis - event.*END: Inclusion Impact Analysis - person", "", sql)
@@ -375,7 +401,9 @@ for(cohort.i in 1:length(covid.cohorts$id)){
                             target_cohort_id = working.id)  
 }
 } else {
-  print(paste0("Skipping creating covid cohorts")) 
+  print(paste0("Skipping creating covid cohorts"))
+  info(logger,paste0("Skipping creating covid cohorts"))
+
 }
 
 

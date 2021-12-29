@@ -29,7 +29,7 @@ library(broom)
 library(rms)
 library(glue)
 library(readr)
-
+library(log4r)
 
 
 # set up ------

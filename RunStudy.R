@@ -1,4 +1,13 @@
+if (!file.exists(output.folder)){
+  dir.create(output.folder, recursive = TRUE)}
+
 start<-Sys.time()
+# start log ----
+log_file <- paste0(output.folder, "/log.txt")
+logger <- create.logger()
+logfile(logger) <- log_file
+level(logger) <- "INFO"
+
 # functions ----
 # printing numbers with 1 decimal place and commas 
 nice.num<-function(x) {
@@ -54,7 +63,9 @@ cohortTableMedications<-paste0(cohortTableStem, "Medications")
 cohortTableLargeScaleFeatures<-paste0(cohortTableStem, "LSF")
 
 # instantiate study cohorts ----
+info(logger, 'INSTANTIATING STUDY COHORTS')
 source(here("1_InstantiateCohorts","InstantiateStudyCohorts.R"))
+info(logger, 'GOT STUDY COHORTS')
 
 # study cohorts ----
 # The study cohorts are various combinations of vaccination dose cohorts that have been instantiated
@@ -78,11 +89,12 @@ study.cohorts<-bind_rows(
   "Viral vector full-dose",
   "mRNA full-dose",
   "mRNA second-dose after viral vector first-dose")) %>% 
-  mutate(id=((nrow(exposure.cohorts)+1):c(nrow(exposure.cohorts)+7))))
+  mutate(id=((max(exposure.cohorts$id)+1):c(max(exposure.cohorts$id)+7))))
   
 
 # get earliest vaccine ----
 earliest.date<-exposure.cohorts_db %>% 
+  filter(cohort_definition_id!="301") %>% 
   summarise(vax.start.date=min(cohort_start_date, na.rm=TRUE)) %>% 
   collect() %>% pull() 
 earliest.date<-dmy(format(earliest.date, "%d/%m/%Y"))
@@ -94,7 +106,9 @@ db.end.date<-observation_period_db %>%
 db.end.date<-dmy(format(db.end.date, "%d/%m/%Y"))
 
 # Run analysis ----
+info(logger, 'RUNNING ANALYSIS')
 source(here("2_Analysis","Analysis.R"))
+info(logger, 'ANALYSIS RAN')
 
 # Tidy up and save ----
 Survival.summary<-bind_rows(Survival.summary, .id = NULL)
@@ -107,10 +121,6 @@ Survival.summary<-Survival.summary %>%
 Cohort.age.plot.data<-bind_rows(Cohort.age.plot.data, .id = NULL)
 
 
-
-if (!file.exists(output.folder)){
-  dir.create(output.folder, recursive = TRUE)}
-
 save(Patient.characteristcis, 
      file = paste0(output.folder, "/Patient.characteristcis_", db.name, ".RData"))
 save(Survival.summary, 
@@ -120,13 +130,20 @@ save(Model.estimates,
 save(Cohort.age.plot.data, 
      file = paste0(output.folder, "/Cohort.age.plot.data_", db.name, ".RData"))
 
+# Time taken
+x <- abs(as.numeric(Sys.time()-start, units="secs"))
+info(logger, paste0("Study took: ", 
+                    sprintf("%02d:%02d:%02d:%02d", 
+                            x %/% 86400,  x %% 86400 %/% 3600, x %% 3600 %/% 
+                              60,  x %% 60 %/% 1)))
+
 # # zip results
 print("Zipping results to output folder")
 unlink(paste0(output.folder, "/OutputToShare_", db.name, ".zip"))
 zipName <- paste0(output.folder, "/OutputToShare_", db.name, ".zip")
 
-
-files<-c(paste0(output.folder, "/Patient.characteristcis_", db.name, ".RData"),
+files<-c(log_file,
+         paste0(output.folder, "/Patient.characteristcis_", db.name, ".RData"),
          paste0(output.folder, "/Survival.summary_", db.name, ".RData"),
          paste0(output.folder, "/Model.estimates_", db.name, ".RData") ,
          paste0(output.folder, "/Cohort.age.plot.data_", db.name, ".RData") )
@@ -139,3 +156,5 @@ print("Done!")
 print("-- If all has worked, there should now be a zip folder with your results in the output folder to share")
 print("-- Thank you for running the study!")
 Sys.time()-start
+# readLines(log_file)
+
