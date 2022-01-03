@@ -1363,21 +1363,21 @@ working.summary.age<-bind_rows(working.summary.age.male, working.summary.age.fem
 #   geom_line(aes(rel.age, or.high, colour=gender), linetype="dashed")
 
 
-# 1.2 age categories
-m.age.cat<-lrm(as.formula(paste("f_u.outcome~", "age_gr2")),
-       x=TRUE,y=TRUE,  maxit=100000,
-       data = working.data)
-
-
-working.summary.age_gr<-head(as.data.frame(summary(m.age.cat, age_gr2='<=44', antilog=FALSE)),2) %>% 
-  mutate(n.tot=n.tot,
-         n.w.outcome=n.w.outcome,
-         or=exp(Effect),
-         or.low=exp(`Lower 0.95`),
-         or.high=exp(`Upper 0.95`)) %>% 
-  select(n.tot, n.w.outcome,or, or.low, or.high)%>%  
-  mutate(model=c("Unadjusted;45-64","Unadjusted;>=65"))  %>% 
-  mutate(model.type="overall")
+# # 1.2 age categories
+# m.age.cat<-lrm(as.formula(paste("f_u.outcome~", "age_gr2")),
+#        x=TRUE,y=TRUE,  maxit=100000,
+#        data = working.data)
+# 
+# 
+# working.summary.age_gr<-head(as.data.frame(summary(m.age.cat, age_gr2='<=44', antilog=FALSE)),2) %>% 
+#   mutate(n.tot=n.tot,
+#          n.w.outcome=n.w.outcome,
+#          or=exp(Effect),
+#          or.low=exp(`Lower 0.95`),
+#          or.high=exp(`Upper 0.95`)) %>% 
+#   select(n.tot, n.w.outcome,or, or.low, or.high)%>%  
+#   mutate(model=c("Unadjusted;45-64","Unadjusted;>=65"))  %>% 
+#   mutate(model.type="overall")
 
 
 
@@ -1530,13 +1530,13 @@ working.summary.exposures<- bind_rows(working.summary.exposures)
 
 
 row.names(working.summary.age)<-1:nrow(working.summary.age)
-row.names(working.summary.age_gr)<-1:nrow(working.summary.age_gr)
+# row.names(working.summary.age_gr)<-1:nrow(working.summary.age_gr)
 row.names(working.summary.gender)<-1:nrow(working.summary.gender)
 if(nrow(working.summary.exposures)>0){ 
 row.names(working.summary.exposures)<-1:nrow(working.summary.exposures)}
 
 bind_rows(working.summary.age,
-          working.summary.age_gr,
+          # working.summary.age_gr,
           working.summary.gender,
           working.summary.exposures)
 
