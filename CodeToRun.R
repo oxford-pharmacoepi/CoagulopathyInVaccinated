@@ -51,10 +51,7 @@ connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "....",
                                                                 password = "....",
                                                                 port = port ,
                                                                 pathToDriver = "....")
-# to check if it worked uncomment and run the below three lines
-# conn <- connect(connectionDetails)
-# querySql(conn,"SELECT COUNT(*) FROM person")
-# disconnect(conn)
+
 
 
 # Specify DBI connection details -----
@@ -71,8 +68,7 @@ db <- dbConnect("...")
 #                 user = "....", 
 #                 password = "....")
 
-# to check this worked, uncomment and run the below line
-# dbListTables(db)
+
 
 
 # Set database details -----
@@ -95,6 +91,17 @@ results_database_schema<-"....."
 # Tables to be created in your results schema for this analysis will be named using this as the stem 
 # Note, any existing tables in your results schema with the same names will be overwritten
 cohortTableStem<-"CoagulopathyInVaccinated"
+
+# Check database connections -----
+# to check whether the OHDSI DatabaseConnector worked, uncomment and run the below three lines
+# conn <- connect(connectionDetails)
+# querySql(conn,paste0("SELECT COUNT(*) FROM ", cdm_database_schema, ".person"))
+# disconnect(conn)
+
+# to check the DBI worked, uncomment and run the below line
+# tbl(db, sql(paste0("SELECT * FROM ",cdm_database_schema, ".person"))) %>% tally()
+
+# in both cases, you should have a count of people in the database printed back in the console
 
 # Run the study ------
 source(here("RunStudy.R"))
