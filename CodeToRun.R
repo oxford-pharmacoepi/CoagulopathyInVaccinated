@@ -1,9 +1,11 @@
-
-#install.packages("renv") # if not already installed, install renv from CRAN
-renv::restore() # this should prompt you to install the various packages required for the study
+# Manage project dependencies ------
+# install.packages("renv") # if not already installed, install renv from CRAN
+# the following will prompt you to install the various packages used in the study 
 renv::activate()
+renv::restore() 
 
-# packages ------
+# Load packages ------
+# load r packages
 library(SqlRender)
 library(DatabaseConnector)
 library(FeatureExtraction)
@@ -22,7 +24,7 @@ library(tableone)
 library(scales)
 library(forcats)
 library(epiR)
-library(RPostgreSQL)
+library(RPostgres)
 library(cmprsk)
 library(mstate)
 library(broom)
@@ -31,66 +33,73 @@ library(glue)
 library(readr)
 library(log4r)
 
-
-# set up ------
+# Set output folder location -----
 # the path to a folder where the results from this analysis will be saved
-output.folder<-here::here("output")
+# to set the location within the project with folder called "ouput, we can use: here("output")
+# but this file path could be set to somewhere else
+output.folder<-here("output")
 
-# The OHDSI DatabaseConnector connection details
-server<-"...." #eg "10.80...../mypostgres"
-user<-"...."
-password<- "...."
-port<-"...."
-host<-"...."
-oracleTempSchema<-NULL
+# Set the name/ acronym for your database (to be used in the titles of reports, etc) -----
+db.name<-"....."
 
-connectionDetails <-DatabaseConnector::downloadJdbcDrivers("postgresql", here::here())
-connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "postgresql",
-                                                                server =server,
-                                                                user = user,
-                                                                password = password,
+# Specify OHDSI DatabaseConnector connection details  ------
+# set up the createConnectionDetails to connect to the database
+# see http://ohdsi.github.io/DatabaseConnector for more details
+connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "....",
+                                                                server ="....", #eg "10.80...../mypostgres"
+                                                                user = "....",
+                                                                password = "....",
                                                                 port = port ,
-                                                                pathToDriver = here::here())
-# The DBI connection details
-server_dbi<-"...."   #eg "mypostgres"
+                                                                pathToDriver = "....")
+# to check if it worked uncomment and run the below three lines
+# conn <- connect(connectionDetails)
+# querySql(conn,"SELECT COUNT(*) FROM person")
+# disconnect(conn)
+
+
+# Specify DBI connection details -----
+# In this study we also use the DBI package to connect to the database
+# set up the dbConnect details below (see https://dbi.r-dbi.org/articles/dbi for more details)
+# you may need to install another package for this (although RPostgres is included with renv in case you are using postgres)
+
 db <- dbConnect("...")
 # eg for postgres 
-# db <- dbConnect(RPostgreSQL::PostgreSQL(),
-#                 dbname = server_dbi,
-#                 port = port,
-#                 host = host, 
-#                 user = user, 
-#                 password = password)
+# db <- dbConnect(RPostgres::PostgreSQL(),
+#                 dbname = "....", #eg "mypostgres" (without the "10.80...../" used in DatabaseConnector)
+#                 port = "....",
+#                 host = "....", 
+#                 user = "....", 
+#                 password = "....")
+
+# to check this worked, uncomment and run the below line
+# dbListTables(db)
+
+
+# Set database details -----
 
 # your sql dialect used with the OHDSI SqlRender package
+# eg “postgresql”, “redshift”, etc
+# see https://ohdsi.github.io/SqlRender/articles/UsingSqlRender.html for more details
 targetDialect <-"....."  
+
 # The name of the schema that contains the OMOP CDM with patient-level data
 cdm_database_schema<-"....."
-# The name of the schema that contains the vocabularies
+
+# The name of the schema that contains the vocabularies 
+# (often this will be the same as cdm_database_schema)
 vocabulary_database_schema<-"....."
-# The name of the schema where a results table will be created 
+
+# The name of the schema where results tables will be created 
 results_database_schema<-"....."
 
 # Tables to be created in your results schema for this analysis will be named using this as the stem 
 # Note, any existing tables in your results schema with the same names will be overwritten
 cohortTableStem<-"CoagulopathyInVaccinated"
 
-# The name/ acronym for your database (to be used in the titles of reports, etc)
-db.name<-"....."
-
-# if you have already created the cohorts, you can set this to FALSE to skip instantiating these cohorts again
-create.exposure.cohorts<-TRUE
-create.outcome.cohorts<-TRUE
-create.profile.cohorts<-TRUE
-
-
-# run the analysis ------
-# to run for just one exposure/ outcome pair
-run.as.test<-TRUE
-
+# Run the study ------
 source(here("RunStudy.R"))
 
-
+# after the study is run you should have a zip folder in your output folder to share
 
 
 

@@ -2,6 +2,15 @@ if (!file.exists(output.folder)){
   dir.create(output.folder, recursive = TRUE)}
 
 start<-Sys.time()
+# extra options for running -----
+# if you have already created the cohorts, you can set this to FALSE to skip instantiating these cohorts again
+create.exposure.cohorts<-TRUE
+create.outcome.cohorts<-TRUE
+create.profile.cohorts<-TRUE
+
+# to run for just one exposure/ outcome pair
+run.as.test<-TRUE
+
 # start log ----
 log_file <- paste0(output.folder, "/log.txt")
 logger <- create.logger()
