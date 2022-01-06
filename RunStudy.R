@@ -9,7 +9,7 @@ create.outcome.cohorts<-TRUE
 create.profile.cohorts<-TRUE
 
 # to run for just one exposure/ outcome pair
-run.as.test<-TRUE
+run.as.test<-FALSE
 
 # start log ----
 log_file <- paste0(output.folder, "/log.txt")
