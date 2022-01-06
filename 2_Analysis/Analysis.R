@@ -443,6 +443,21 @@ Pop<-Pop %>%
 Pop<-Pop %>%
   filter(prior_obs_years>=1)
 
+# take smaple -----
+if(nrow(Pop)>10000000){
+ print(paste0("Taking random sample: current size of ",  working.study.cohort, ": ", nrow(Pop)))
+ info(logger, paste0("Taking random sample: current size of ",  working.study.cohort, ": ", nrow(Pop)))
+
+ Pop<-Pop %>% slice_sample(n=10000000)
+
+ print(paste0("Sampled size of ",  working.study.cohort, ": ", nrow(Pop)))
+ info(logger, paste0("Sampled size of ",  working.study.cohort, ": ", nrow(Pop)))
+
+ 
+}
+
+
+
 # condition history ------
 # add each condition to pop
 
