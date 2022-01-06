@@ -49,7 +49,7 @@ connectionDetails <- DatabaseConnector::createConnectionDetails(dbms = "....",
                                                                 server ="....", #eg "10.80...../mypostgres"
                                                                 user = "....",
                                                                 password = "....",
-                                                                port = port ,
+                                                                port = "....",
                                                                 pathToDriver = "....")
 
 
