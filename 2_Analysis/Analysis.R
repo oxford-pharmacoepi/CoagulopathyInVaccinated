@@ -720,11 +720,11 @@ summary.characteristics %>%
 }
 
 # overall
-Pop.summary.characteristics<-get.summary.characteristics(Pop, "Overall")
+# Pop.summary.characteristics<-get.summary.characteristics(Pop, "Overall")
 # those with a year of prior history
-# Pop.summary.characteristics.with.history<-get.summary.characteristics(
-#   Pop %>% filter(prior_obs_years>=1),
-#   "Overall")
+Pop.summary.characteristics.with.history<-get.summary.characteristics(
+  Pop %>% filter(prior_obs_years>=1),
+  "Overall")
 
 # age plot data -----
 get.age.plot.data<-function(working.data){
@@ -902,15 +902,15 @@ working.Pop.w.outcome<-working.Pop %>% filter(f_u.outcome==1)
       
 # summarise characteristics -----
 # overall
-Pop.summary.characteristics<-left_join(Pop.summary.characteristics,
-                                get.summary.characteristics(working.Pop.w.outcome, working.outcome.name),
-                                             by="var")
+# Pop.summary.characteristics<-left_join(Pop.summary.characteristics,
+#                                 get.summary.characteristics(working.Pop.w.outcome, working.outcome.name),
+#                                              by="var")
 # #with.history
 # # overall
-# Pop.summary.characteristics.with.history<-left_join(Pop.summary.characteristics.with.history,
-#                                                           get.summary.characteristics(working.Pop.w.outcome %>% 
-#                                                                                         filter(prior_obs_years>=1), working.outcome.name),
-#                                                           by="var")
+Pop.summary.characteristics.with.history<-left_join(Pop.summary.characteristics.with.history,
+                                                          get.summary.characteristics(working.Pop.w.outcome %>%
+                                                                                        filter(prior_obs_years>=1), working.outcome.name),
+                                                          by="var")
 
 
 # age plot data -----
@@ -1183,71 +1183,71 @@ working.Survival.summary[[paste0(value.working.study.cohort,";",value.working.ou
   
 }
 
-Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.all")]]<-
-    get.Surv.summaries(working.data=working.Pop,
-                       value.prior.obs.required="No",
-                       value.pop.type="All",
-                       value.working.outcome=working.outcome,
-                       value.working.outcome.name=working.outcome.name,
-                       value.working.study.cohort=working.study.cohort)
-
-if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
-Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.no.covid")]]<-
-    get.Surv.summaries(working.data=working.Pop %>% 
-                         filter(covid.year_prior==0),
-                       value.prior.obs.required="No",
-                       value.pop.type="No covid",
-                       value.working.outcome=working.outcome,
-                       value.working.outcome.name=working.outcome.name,
-                       value.working.study.cohort=working.study.cohort)
-}
-
-if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
-Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.covid")]]<-
-    get.Surv.summaries(working.data=working.Pop %>% 
-                         filter(covid.year_prior==1),
-                       value.prior.obs.required="No",
-                       value.pop.type="Covid",
-                       value.working.outcome=working.outcome,
-                       value.working.outcome.name=working.outcome.name,
-                       value.working.study.cohort=working.study.cohort)
-}
+# Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.all")]]<-
+#     get.Surv.summaries(working.data=working.Pop,
+#                        value.prior.obs.required="No",
+#                        value.pop.type="All",
+#                        value.working.outcome=working.outcome,
+#                        value.working.outcome.name=working.outcome.name,
+#                        value.working.study.cohort=working.study.cohort)
+# 
+# if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+# Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.no.covid")]]<-
+#     get.Surv.summaries(working.data=working.Pop %>% 
+#                          filter(covid.year_prior==0),
+#                        value.prior.obs.required="No",
+#                        value.pop.type="No covid",
+#                        value.working.outcome=working.outcome,
+#                        value.working.outcome.name=working.outcome.name,
+#                        value.working.study.cohort=working.study.cohort)
+# }
+# 
+# if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+# Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","No.prior.obs", ";", "pop.covid")]]<-
+#     get.Surv.summaries(working.data=working.Pop %>% 
+#                          filter(covid.year_prior==1),
+#                        value.prior.obs.required="No",
+#                        value.pop.type="Covid",
+#                        value.working.outcome=working.outcome,
+#                        value.working.outcome.name=working.outcome.name,
+#                        value.working.study.cohort=working.study.cohort)
+# }
 #
 
-# if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
-# Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.all")]]<-
-#   get.Surv.summaries(working.data=working.Pop %>% 
-#                        filter(prior_obs_years>=1),
-#                      value.prior.obs.required="Yes",
-#                      value.pop.type="All",
-#                      value.working.outcome=working.outcome,
-#                      value.working.outcome.name=working.outcome.name,
-#                      value.working.study.cohort=working.study.cohort)
-# }
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.all")]]<-
+  get.Surv.summaries(working.data=working.Pop %>%
+                       filter(prior_obs_years>=1),
+                     value.prior.obs.required="Yes",
+                     value.pop.type="All",
+                     value.working.outcome=working.outcome,
+                     value.working.outcome.name=working.outcome.name,
+                     value.working.study.cohort=working.study.cohort)
+}
 
-# if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
-# Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.no.covid")]]<-
-#   get.Surv.summaries(working.data=working.Pop %>% 
-#                        filter(prior_obs_years>=1)%>% 
-#                          filter(covid.year_prior==0),
-#                      value.prior.obs.required="Yes",
-#                      value.pop.type="No covid",
-#                      value.working.outcome=working.outcome,
-#                      value.working.outcome.name=working.outcome.name,
-#                      value.working.study.cohort=working.study.cohort)
-# }
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.no.covid")]]<-
+  get.Surv.summaries(working.data=working.Pop %>%
+                       filter(prior_obs_years>=1)%>%
+                         filter(covid.year_prior==0),
+                     value.prior.obs.required="Yes",
+                     value.pop.type="No covid",
+                     value.working.outcome=working.outcome,
+                     value.working.outcome.name=working.outcome.name,
+                     value.working.study.cohort=working.study.cohort)
+}
 
-# if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
-# Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.covid")]]<-
-#   get.Surv.summaries(working.data=working.Pop %>% 
-#                        filter(prior_obs_years>=1)%>% 
-#                          filter(covid.year_prior==1),
-#                      value.prior.obs.required="Yes",
-#                      value.pop.type="Covid",
-#                      value.working.outcome=working.outcome,
-#                      value.working.outcome.name=working.outcome.name,
-#                      value.working.study.cohort=working.study.cohort)
-# }
+if(nrow(working.Pop %>% filter(prior_obs_years>=1)) >5 ) {
+Survival.summary[[paste0(working.study.cohort,";",working.outcome.name,";","Prior.obs", ";", "pop.covid")]]<-
+  get.Surv.summaries(working.data=working.Pop %>%
+                       filter(prior_obs_years>=1)%>%
+                         filter(covid.year_prior==1),
+                     value.prior.obs.required="Yes",
+                     value.pop.type="Covid",
+                     value.working.outcome=working.outcome,
+                     value.working.outcome.name=working.outcome.name,
+                     value.working.study.cohort=working.study.cohort)
+}
 # modelling  ------
 print(" -- Fitting models")
 info(logger," -- Fitting models")
@@ -1545,94 +1545,94 @@ bind_rows(working.summary.age,
 
 }
 
-if(nrow(working.Pop %>% 
-        filter(f_u.outcome==1))>=30){  
-Model.estimates[[paste0(working.study.cohort,
-                                   ";",working.outcome.name,";",
-                                   "No.prior.obs", ";",
-                                   "pop.all")]]<-get.models(working.Pop) %>% 
-  mutate(prior.obs.required="No",
-         pop.type="All",
-         working.outcome=working.outcome,
-         working.outcome.name=working.outcome.name,
-         working.study.cohort=working.study.cohort)
-}
-
-if(nrow(working.Pop %>% 
-        filter(covid.year_prior==0) %>% 
-        filter(f_u.outcome==1))>=30){  
-Model.estimates[[paste0(working.study.cohort,
-                                   ";",working.outcome.name,";",
-                                   "No.prior.obs", ";",
-                                   "pop.no.covid")]]<-get.models(working.Pop %>% 
-        filter(covid.year_prior==0) ) %>% 
-  mutate(prior.obs.required="No",
-         pop.type="No covid",
-         working.outcome=working.outcome,
-         working.outcome.name=working.outcome.name,
-         working.study.cohort=working.study.cohort)
-}
-
-if(nrow(working.Pop %>% 
-        filter(covid.year_prior==1) %>% 
-        filter(f_u.outcome==1))>=30){  
-Model.estimates[[paste0(working.study.cohort,
-                                   ";",working.outcome.name,";",
-                                   "No.prior.obs", ";",
-                                   "pop.covid")]]<-get.models(working.Pop %>% 
-        filter(covid.year_prior==1) ) %>% 
-  mutate(prior.obs.required="No",
-         pop.type="Covid",
-         working.outcome=working.outcome,
-         working.outcome.name=working.outcome.name,
-         working.study.cohort=working.study.cohort)
-}
-
-#
 # if(nrow(working.Pop %>% 
-#         filter(prior_obs_years>=1) %>% 
 #         filter(f_u.outcome==1))>=30){  
 # Model.estimates[[paste0(working.study.cohort,
 #                                    ";",working.outcome.name,";",
-#                                    "prior.obs", ";",
-#                                    "pop.all")]]<-get.models(working.Pop %>%   filter(prior_obs_years>=1)) %>% 
-#   mutate(prior.obs.required="Yes",
+#                                    "No.prior.obs", ";",
+#                                    "pop.all")]]<-get.models(working.Pop) %>% 
+#   mutate(prior.obs.required="No",
 #          pop.type="All",
 #          working.outcome=working.outcome,
 #          working.outcome.name=working.outcome.name,
-#          working.study.cohort=working.study.cohort)}
-
+#          working.study.cohort=working.study.cohort)
+# }
+# 
 # if(nrow(working.Pop %>% 
 #         filter(covid.year_prior==0) %>% 
-#         filter(prior_obs_years>=1) %>% 
 #         filter(f_u.outcome==1))>=30){  
 # Model.estimates[[paste0(working.study.cohort,
 #                                    ";",working.outcome.name,";",
-#                                    "prior.obs", ";",
-#                                    "no.covid")]]<-get.models(working.Pop %>% 
-#                                                                filter(covid.year_prior==0) %>% 
-#                                                                filter(prior_obs_years>=1)) %>% 
-#   mutate(prior.obs.required="Yes",
+#                                    "No.prior.obs", ";",
+#                                    "pop.no.covid")]]<-get.models(working.Pop %>% 
+#         filter(covid.year_prior==0) ) %>% 
+#   mutate(prior.obs.required="No",
 #          pop.type="No covid",
 #          working.outcome=working.outcome,
 #          working.outcome.name=working.outcome.name,
-#          working.study.cohort=working.study.cohort)}
-
+#          working.study.cohort=working.study.cohort)
+# }
+# 
 # if(nrow(working.Pop %>% 
 #         filter(covid.year_prior==1) %>% 
-#         filter(prior_obs_years>=1) %>% 
 #         filter(f_u.outcome==1))>=30){  
 # Model.estimates[[paste0(working.study.cohort,
 #                                    ";",working.outcome.name,";",
-#                                    "prior.obs", ";",
-#                                    "Covid")]]<-get.models(working.Pop %>% 
-#                                                                filter(covid.year_prior==1) %>% 
-#                                                                filter(prior_obs_years>=1)) %>% 
-#   mutate(prior.obs.required="Yes",
+#                                    "No.prior.obs", ";",
+#                                    "pop.covid")]]<-get.models(working.Pop %>% 
+#         filter(covid.year_prior==1) ) %>% 
+#   mutate(prior.obs.required="No",
 #          pop.type="Covid",
 #          working.outcome=working.outcome,
 #          working.outcome.name=working.outcome.name,
-#          working.study.cohort=working.study.cohort)}
+#          working.study.cohort=working.study.cohort)
+# }
+
+
+if(nrow(working.Pop %>%
+        filter(prior_obs_years>=1) %>%
+        filter(f_u.outcome==1))>=30){
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "prior.obs", ";",
+                                   "pop.all")]]<-get.models(working.Pop %>%   filter(prior_obs_years>=1)) %>%
+  mutate(prior.obs.required="Yes",
+         pop.type="All",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)}
+
+if(nrow(working.Pop %>%
+        filter(covid.year_prior==0) %>%
+        filter(prior_obs_years>=1) %>%
+        filter(f_u.outcome==1))>=30){
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "prior.obs", ";",
+                                   "no.covid")]]<-get.models(working.Pop %>%
+                                                               filter(covid.year_prior==0) %>%
+                                                               filter(prior_obs_years>=1)) %>%
+  mutate(prior.obs.required="Yes",
+         pop.type="No covid",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)}
+
+if(nrow(working.Pop %>%
+        filter(covid.year_prior==1) %>%
+        filter(prior_obs_years>=1) %>%
+        filter(f_u.outcome==1))>=30){
+Model.estimates[[paste0(working.study.cohort,
+                                   ";",working.outcome.name,";",
+                                   "prior.obs", ";",
+                                   "Covid")]]<-get.models(working.Pop %>%
+                                                               filter(covid.year_prior==1) %>%
+                                                               filter(prior_obs_years>=1)) %>%
+  mutate(prior.obs.required="Yes",
+         pop.type="Covid",
+         working.outcome=working.outcome,
+         working.outcome.name=working.outcome.name,
+         working.study.cohort=working.study.cohort)}
 
 
 
@@ -1644,16 +1644,16 @@ gc()     }
 
 
 pat.ch<-list()
-pat.ch[[1]]<-Pop.summary.characteristics %>%
-    mutate(pop.type="All") %>% 
-    mutate(prior.obs.required="No") %>% 
-    mutate(pop=working.study.cohort) %>% 
-    mutate(age_gr2="All")
-# pat.ch[[2]]<-Pop.summary.characteristics.with.history %>%
+# pat.ch[[1]]<-Pop.summary.characteristics %>%
 #     mutate(pop.type="All") %>% 
-#     mutate(prior.obs.required="Yes") %>% 
+#     mutate(prior.obs.required="No") %>% 
 #     mutate(pop=working.study.cohort) %>% 
 #     mutate(age_gr2="All")
+pat.ch[[2]]<-Pop.summary.characteristics.with.history %>%
+    mutate(pop.type="All") %>%
+    mutate(prior.obs.required="Yes") %>%
+    mutate(pop=working.study.cohort) %>%
+    mutate(age_gr2="All")
 Patient.characteristcis[[paste0(i)]]<-bind_rows(pat.ch)
 
 gc() }
