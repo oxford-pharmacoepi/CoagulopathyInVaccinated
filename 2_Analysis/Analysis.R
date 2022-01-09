@@ -127,12 +127,9 @@ rm(ids.to.collect)
 
 if(working.study.cohort=="Any full-dose"){
 ids.to.collect<-exposure.cohorts %>% 
-  filter(str_detect(name,"dose2") |
-         str_detect(name,"dose1_janssen")) %>% 
-  filter(name!="dose2_moderna_mix") %>% 
-  filter(name!="dose2_moderna") %>% 
-  filter(name!="dose2_pfizer") %>% 
-  filter(name!="dose2_pfizer_mix") %>% 
+  filter(name %in% 
+       c("dose1_janssen","dose2_AZ",
+         "dose2_moderna_any", "dose2_pfizer_any" )) %>% 
   select(id) %>% 
   pull()
 working.exposure.cohorts_db<-exposure.cohorts_db %>% 
@@ -154,7 +151,8 @@ working.exposure.cohorts_db<-working.exposure.cohorts_db %>%
 
 if(working.study.cohort=="Viral vector first-dose"){
 ids.to.collect<-exposure.cohorts %>% 
-  filter(str_detect(name,"dose1_AZ|dose1_janssen")) %>% 
+  filter(name %in% 
+       c("dose1_janssen","dose1_AZ" )) %>% 
   select(id) %>% 
   pull()
 working.exposure.cohorts_db<-exposure.cohorts_db %>% 
@@ -193,7 +191,8 @@ rm(ids.to.collect)
 
 if(working.study.cohort=="mRNA first-dose"){
 ids.to.collect<-exposure.cohorts %>% 
-  filter(str_detect(name,"dose1_moderna|dose1_pfizer")) %>% 
+  filter(name %in% 
+       c("dose1_moderna","dose1_pfizer" )) %>% 
   select(id) %>% 
   pull()
 working.exposure.cohorts_db<-exposure.cohorts_db %>% 
@@ -232,9 +231,10 @@ rm(ids.to.collect)
 
 if(working.study.cohort=="Viral vector full-dose"){
 ids.to.collect<-exposure.cohorts %>% 
-  filter(str_detect(name,"dose2_AZ|dose1_janssen")) %>% 
+  filter(name %in% 
+       c("dose2_AZ","dose1_janssen" )) %>% 
   select(id) %>% 
-  pull()
+  pull()  
 working.exposure.cohorts_db<-exposure.cohorts_db %>% 
                filter(cohort_definition_id %in% !!ids.to.collect ) %>% 
                select(subject_id,cohort_start_date,cohort_definition_id) %>% 
