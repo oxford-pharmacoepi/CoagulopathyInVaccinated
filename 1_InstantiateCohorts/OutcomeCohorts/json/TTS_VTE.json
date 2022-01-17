@@ -3382,38 +3382,6 @@
   },
   "InclusionRules": [
     {
-      "name": "365 day clean window ",
-      "expression": {
-        "Type": "ALL",
-        "CriteriaList": [
-          {
-            "Criteria": {
-              "ConditionOccurrence": {
-                "CodesetId": 20
-              }
-            },
-            "StartWindow": {
-              "Start": {
-                "Days": 365,
-                "Coeff": -1
-              },
-              "End": {
-                "Days": 1,
-                "Coeff": -1
-              },
-              "UseEventEnd": false
-            },
-            "Occurrence": {
-              "Type": 0,
-              "Count": 0
-            }
-          }
-        ],
-        "DemographicCriteriaList": [],
-        "Groups": []
-      }
-    },
-    {
       "name": "thrombocytopenia within 10 days",
       "expression": {
         "Type": "ANY",
