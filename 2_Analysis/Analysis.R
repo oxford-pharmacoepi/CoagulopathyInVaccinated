@@ -784,6 +784,10 @@ working.Pop<-Pop
 # event of interest
 working.outcomes<-outcome.cohorts_db %>%
       filter(cohort_definition_id %in% working.outcome) %>%
+        inner_join(working.exposure.cohorts_db  %>%
+                     rename("subject_id" = "person_id")%>%
+                     select(subject_id) %>%
+                     distinct()) %>%
       select(subject_id, cohort_start_date) %>% 
       collect()
 
