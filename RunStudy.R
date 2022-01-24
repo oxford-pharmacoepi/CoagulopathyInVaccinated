@@ -11,6 +11,9 @@ create.profile.cohorts<-TRUE
 # to run for just one exposure/ outcome pair
 run.as.test<-FALSE
 
+# run main exposure/ outcome pairs only
+run.main.analyses.only<-FALSE
+
 # start log ----
 log_file <- paste0(output.folder, "/log.txt")
 logger <- create.logger()

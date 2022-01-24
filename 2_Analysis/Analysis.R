@@ -5,6 +5,27 @@ Survival.summary<-list()
 Model.estimates<-list()  
 Cohort.age.plot.data<-list()
 
+# if only running main analysis -----
+if(run.main.analyses.only==TRUE){
+study.cohorts<-study.cohorts %>% 
+  filter(name %in% 
+           c("General population 2017",
+             "Any first-dose", "Any full-dose",
+             "Viral vector first-dose",
+             "mRNA first-dose",
+             "Viral vector full-dose",
+             "mRNA full-dose"))
+
+outcome.cohorts<-outcome.cohorts %>% 
+  filter(name %in%  
+           c("CVST", "MI isc stroke",
+             "SVT", "thrombocyt",
+             "VTE narrow","TTS_ATE",
+             "TTS_CVST", "TTS_isc stroke",
+             "TTS_SVT","TTS_VTE"))
+}
+
+
 # run through exposures and outcomes ----
 n.sudy.cohorts.to.run<-ifelse(run.as.test==TRUE,1,
                               length(study.cohorts$id) )
