@@ -340,6 +340,30 @@ working.exposure.cohorts_db<-working.exposure.cohorts_db %>%
 }
 
 
+# take smaple -----
+current.n<-as.numeric(working.exposure.cohorts_db %>% 
+        tally() %>% 
+        collect() %>% pull()) 
+
+if(current.n>20000000){
+ print(paste0("Taking random sample: current size of ",  
+              working.study.cohort, ": ", current.n))
+ info(logger, paste0("Taking random sample: current size of ",  
+                     working.study.cohort, ": ", current.n))
+
+ working.exposure.cohorts_db<-working.exposure.cohorts_db %>% slice_sample(n=20000000)
+ 
+ current.n<-as.numeric(working.exposure.cohorts_db %>% 
+        tally() %>% 
+        collect() %>% pull()) 
+ 
+ print(paste0("Sampled size of ",  working.study.cohort, ": ", current.n))
+ info(logger, paste0("Sampled size of ",  working.study.cohort, ": ", current.n))
+
+}
+rm(current.n)
+
+
 Pop<-person_db %>% 
   inner_join(working.exposure.cohorts_db,
              by = "person_id") %>% 
@@ -358,6 +382,10 @@ Pop<-Pop %>%
               rename("vax_type"="name"),
             by=c("cohort_definition_id"="id"))
 # table(Pop$vax_type, useNA = "always")
+
+# compute ---
+working.exposure.cohorts_db<-working.exposure.cohorts_db %>% 
+  compute()
 
 # drop anyone with duplicates ----
 # these are people with more than one type of vax recorded on the same day
@@ -464,18 +492,7 @@ Pop<-Pop %>%
 Pop<-Pop %>%
   filter(prior_obs_years>=1)
 
-# take smaple -----
-if(nrow(Pop)>20000000){
- print(paste0("Taking random sample: current size of ",  working.study.cohort, ": ", nrow(Pop)))
- info(logger, paste0("Taking random sample: current size of ",  working.study.cohort, ": ", nrow(Pop)))
 
- Pop<-Pop %>% slice_sample(n=20000000)
-
- print(paste0("Sampled size of ",  working.study.cohort, ": ", nrow(Pop)))
- info(logger, paste0("Sampled size of ",  working.study.cohort, ": ", nrow(Pop)))
-
- 
-}
 
 
 
@@ -574,11 +591,13 @@ print(paste0("-- Getting history of ",working.name ," for ", working.study.cohor
 info(logger, paste0("-- Getting history of ",working.name ," for ", working.study.cohort))
 
 working.persons <- cohortTableMedications_db %>% 
-  filter(cohort_definition_id==working.code)%>%  
+  filter(cohort_definition_id==working.code) %>% 
   rename("person_id"="subject_id")  %>% 
   rename("drug_era_start_date"="cohort_start_date")  %>% 
   rename("drug_era_end_date"="cohort_end_date") %>% 
   select(person_id, drug_era_start_date, drug_era_end_date) %>% 
+  inner_join(working.exposure.cohorts_db %>% select(person_id) %>% distinct(),
+               by = "person_id")%>%  
   collect()
 
 if(nrow(working.persons)>0){ 
