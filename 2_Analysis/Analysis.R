@@ -344,7 +344,12 @@ working.exposure.cohorts_db<-working.exposure.cohorts_db %>%
 current.n<-as.numeric(working.exposure.cohorts_db %>% 
         tally() %>% 
         collect() %>% pull()) 
+print(paste0("Current sample size of ",  
+              working.study.cohort, ": ", current.n))
+info(logger, paste0("Current sample size of ",    
+                     working.study.cohort, ": ", current.n))
 
+if(working.study.cohort=="General population 2017"){
 if(current.n>20000000){
  print(paste0("Taking random sample: current size of ",  
               working.study.cohort, ": ", current.n))
@@ -359,8 +364,7 @@ if(current.n>20000000){
  
  print(paste0("Sampled size of ",  working.study.cohort, ": ", current.n))
  info(logger, paste0("Sampled size of ",  working.study.cohort, ": ", current.n))
-
-}
+}}
 rm(current.n)
 
 
@@ -1324,6 +1328,12 @@ dd<<-suppressWarnings( datadist(working.Pop %>%
 
 get.models<-function(working.data){
 
+if(nrow(working.data)>10000000){
+ working.data<-working.data %>% 
+   slice_sample(n=10000000)
+}  
+  
+  
 n.tot<-working.data  %>% tally() %>% pull()
 n.w.outcome <-working.data %>% filter(f_u.outcome==1) %>% tally()  %>% pull() 
   
