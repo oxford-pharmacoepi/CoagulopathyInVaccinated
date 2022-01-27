@@ -10,19 +10,15 @@ if(run.main.analyses.only==TRUE){
 study.cohorts<-study.cohorts %>% 
   filter(name %in% 
            c("General population 2017",
-             "Any first-dose", "Any full-dose",
-             "Viral vector first-dose",
-             "mRNA first-dose",
-             "Viral vector full-dose",
-             "mRNA full-dose"))
+             "Any first-dose", 
+             "Any full-dose"))
 
 outcome.cohorts<-outcome.cohorts %>% 
   filter(name %in%  
            c("CVST", "MI isc stroke",
              "SVT", "thrombocyt",
              "VTE narrow","TTS_ATE",
-             "TTS_CVST", "TTS_isc stroke",
-             "TTS_SVT","TTS_VTE"))
+             "TTS_VTE"))
 }
 
 
@@ -350,13 +346,13 @@ info(logger, paste0("Current sample size of ",
                      working.study.cohort, ": ", current.n))
 
 if(working.study.cohort=="General population 2017"){
-if(current.n>20000000){
+if(current.n>15000000){
  print(paste0("Taking random sample: current size of ",  
               working.study.cohort, ": ", current.n))
  info(logger, paste0("Taking random sample: current size of ",  
                      working.study.cohort, ": ", current.n))
 
- working.exposure.cohorts_db<-working.exposure.cohorts_db %>% slice_sample(n=20000000)
+ working.exposure.cohorts_db<-working.exposure.cohorts_db %>% slice_sample(n=15000000)
  
  current.n<-as.numeric(working.exposure.cohorts_db %>% 
         tally() %>% 
@@ -1328,12 +1324,33 @@ dd<<-suppressWarnings( datadist(working.Pop %>%
 
 get.models<-function(working.data){
 
-if(nrow(working.data)>10000000){
- working.data<-working.data %>% 
-   slice_sample(n=10000000)
-}  
+if(nrow(working.data)>8000000 &
+   str_detect(working.outcome.name,"TTS_")){
+working.data<-working.data %>% 
+   slice_sample(n=8000000)
+} 
   
+  if(nrow(working.data)>8000000 &
+   str_detect(working.outcome.name,"CVST")){
+working.data<-working.data %>% 
+   slice_sample(n=8000000)
+  } 
   
+  if(nrow(working.data)>8000000 &
+   str_detect(working.outcome.name,"SVT")){
+working.data<-working.data %>% 
+   slice_sample(n=8000000)
+} 
+  
+if(nrow(working.data)>4000000 &
+   str_detect(working.outcome.name,"CVST", negate=TRUE) &
+   str_detect(working.outcome.name,"SVT", negate=TRUE) &
+   str_detect(working.outcome.name,"TTS_", negate=TRUE)){
+working.data<-working.data %>% 
+   slice_sample(n=4000000)
+}   
+  
+
 n.tot<-working.data  %>% tally() %>% pull()
 n.w.outcome <-working.data %>% filter(f_u.outcome==1) %>% tally()  %>% pull() 
   
