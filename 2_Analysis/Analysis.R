@@ -471,9 +471,11 @@ Pop<-Pop %>%
                         levels = c("Male", "Female")))
 table(Pop$gender, useNA = "always")
 
-# if missing age or gender, drop ----
+# if missing (or unreasonable) age or gender, drop ----
 Pop<-Pop %>% 
-  filter(!is.na(age))
+  filter(!is.na(age)) %>% 
+  filter(age>=18) %>% 
+  filter(age<=110)
 
 Pop<-Pop %>% 
   filter(!is.na(gender))
