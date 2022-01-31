@@ -1326,30 +1326,30 @@ dd<<-suppressWarnings( datadist(working.Pop %>%
 
 get.models<-function(working.data){
 
-if(nrow(working.data)>8000000 &
+if(nrow(working.data)>15000000 &
    str_detect(working.outcome.name,"TTS_")){
 working.data<-working.data %>% 
-   slice_sample(n=8000000)
+   slice_sample(n=15000000)
 } 
   
-  if(nrow(working.data)>8000000 &
+  if(nrow(working.data)>15000000 &
    str_detect(working.outcome.name,"CVST")){
 working.data<-working.data %>% 
-   slice_sample(n=8000000)
+   slice_sample(n=15000000)
   } 
   
-  if(nrow(working.data)>8000000 &
+  if(nrow(working.data)>15000000 &
    str_detect(working.outcome.name,"SVT")){
 working.data<-working.data %>% 
-   slice_sample(n=8000000)
+   slice_sample(n=15000000)
 } 
   
-if(nrow(working.data)>4000000 &
+if(nrow(working.data)>6000000 &
    str_detect(working.outcome.name,"CVST", negate=TRUE) &
    str_detect(working.outcome.name,"SVT", negate=TRUE) &
    str_detect(working.outcome.name,"TTS_", negate=TRUE)){
 working.data<-working.data %>% 
-   slice_sample(n=4000000)
+   slice_sample(n=6000000)
 }   
   
 
