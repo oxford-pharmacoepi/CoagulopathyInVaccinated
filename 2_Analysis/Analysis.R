@@ -480,6 +480,10 @@ Pop<-Pop %>%
 Pop<-Pop %>% 
   filter(!is.na(gender))
 
+if(db.name=="OpenClaims"){
+Pop<-Pop %>% 
+  filter(year_of_birth>1936)}
+
 # drop if missing observation period end date ----
 Pop<-Pop %>% 
   filter(!is.na(observation_period_end_date))
